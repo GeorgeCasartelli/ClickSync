@@ -6,13 +6,31 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		DD6FBB2B2EE1BA4E005008C8 /* AudioKit in Frameworks */ = {isa = PBXBuildFile; productRef = DD6FBB2A2EE1BA4E005008C8 /* AudioKit */; };
+		DD6FBB2E2EE1BA9D005008C8 /* SoundpipeAudioKit in Frameworks */ = {isa = PBXBuildFile; productRef = DD6FBB2D2EE1BA9D005008C8 /* SoundpipeAudioKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		DDDC681D2EC6131600336F47 /* ClickSync.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClickSync.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DD6FBE2F2EE1BE26005008C8 /* Exceptions for "ClickSync" folder in "ClickSync" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DDDC681C2EC6131500336F47 /* ClickSync */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		DDDC681F2EC6131600336F47 /* ClickSync */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DD6FBE2F2EE1BE26005008C8 /* Exceptions for "ClickSync" folder in "ClickSync" target */,
+			);
 			path = ClickSync;
 			sourceTree = "<group>";
 		};
@@ -23,6 +41,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DD6FBB2E2EE1BA9D005008C8 /* SoundpipeAudioKit in Frameworks */,
+				DD6FBB2B2EE1BA4E005008C8 /* AudioKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +85,8 @@
 			);
 			name = ClickSync;
 			packageProductDependencies = (
+				DD6FBB2A2EE1BA4E005008C8 /* AudioKit */,
+				DD6FBB2D2EE1BA9D005008C8 /* SoundpipeAudioKit */,
 			);
 			productName = ClickSync;
 			productReference = DDDC681D2EC6131600336F47 /* ClickSync.app */;
@@ -94,6 +116,10 @@
 			);
 			mainGroup = DDDC68142EC6131500336F47;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DD6FBB292EE1BA4E005008C8 /* XCRemoteSwiftPackageReference "AudioKit" */,
+				DD6FBB2C2EE1BA9D005008C8 /* XCRemoteSwiftPackageReference "SoundpipeAudioKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DDDC681E2EC6131600336F47 /* Products */;
 			projectDirPath = "";
@@ -255,6 +281,7 @@
 				DEVELOPMENT_TEAM = DB3P3J7VSB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ClickSync/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -284,6 +311,7 @@
 				DEVELOPMENT_TEAM = DB3P3J7VSB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ClickSync/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -324,6 +352,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		DD6FBB292EE1BA4E005008C8 /* XCRemoteSwiftPackageReference "AudioKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AudioKit/AudioKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.6.5;
+			};
+		};
+		DD6FBB2C2EE1BA9D005008C8 /* XCRemoteSwiftPackageReference "SoundpipeAudioKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AudioKit/SoundpipeAudioKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.7.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DD6FBB2A2EE1BA4E005008C8 /* AudioKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DD6FBB292EE1BA4E005008C8 /* XCRemoteSwiftPackageReference "AudioKit" */;
+			productName = AudioKit;
+		};
+		DD6FBB2D2EE1BA9D005008C8 /* SoundpipeAudioKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DD6FBB2C2EE1BA9D005008C8 /* XCRemoteSwiftPackageReference "SoundpipeAudioKit" */;
+			productName = SoundpipeAudioKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = DDDC68152EC6131500336F47 /* Project object */;
 }
