@@ -16,16 +16,21 @@ final class MetronomeViewModel: ObservableObject {
 
     @Published var accentedBeats: Set<Int> = [0]
     
+    @Published var currentBeat: Int = 0
+    
     private let engine = MetronomeEngine()
     
     init() {
         availableSoundNames = Array(engine.soundPairs.keys).sorted()
-        
-        
-        //        spacedSoundNames = availableSoundNames
+
         selectedSoundName = availableSoundNames.first ?? ""
         
         engine.loadSoundPairs(named: selectedSoundName)
+        
+        
+        engine.onBeatChange = { [weak self] beat in
+            self?.currentBeat = beat
+        }
     }
     
     
@@ -70,14 +75,6 @@ final class MetronomeViewModel: ObservableObject {
     func updateTimeSignature(top: Double, bottom: Double) {
         
         
-        
-        /// FIX !!
-        ///
-        ///
-        ///
-        ///
-        ///
-        ///
         let adjustedBPM = bpm / (bottom / 4.0)
         print("Top is \(top), bottom is \(bottom)")
         engine.setSequence(restart: true, top: Int(top), bottom: Int(bottom))

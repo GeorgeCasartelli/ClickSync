@@ -132,76 +132,60 @@ struct SoundRow: View {
 struct AccentPickerView: View {
     let beatCount: Int
     let accentedBeats: Set<Int>
+    let currentBeat: Int
     let onTapBeat: (Int) -> Void
     
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 16) {
-                ForEach(0..<beatCount, id: \.self) { beat in
-                    Circle()
-                        .fill(accentedBeats.contains(beat) ? Color.orange : Color.gray.opacity(0.3))
-                        .frame(width: 14, height: 14)
-                        .shadow(color: accentedBeats.contains(beat) ? .orange : .clear, radius: accentedBeats.contains(beat) ? 6 : 0)
-                        .onTapGesture {
-                            onTapBeat(beat)
-                        }
-                        .padding(.trailing, ((beat + 1) % 4 == 0 && beat != beatCount - 1) ? 4 : 4)
-                    if (beat + 1) % 4 == 0 && beat != beatCount - 1 {
-                        Rectangle()
-                            .fill(Color.orange.opacity(0.3))
-                            .frame(width: 2, height: 20)
-                            .padding(.trailing, 4)
-                    }
-//                    if beat % 4 == 0 {
-//                        .padding()
-//                    }
-                }
-                    
-            }
-            .padding()
-        }
-        .frame(height:50)
-        .overlay(
-            Group {
-                if shouldShowScrollIndicator {
-                    
-                    HStack {
-                        Spacer()
-                        LinearGradient(
-                            colors: [Color.clear, Color(red: 0.1, green: 0.1, blue: 0.1).opacity(0.8)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                            .frame(width: 50)
-                            .allowsHitTesting(false)
-                        
-                    }
-                }
-            }
-            
-                
-        )
+    var dividerInterval: Int? {
+        if beatCount == 3 || beatCount == 4 || beatCount == 5 { return nil} // return nothing if 3 4 or 5
+        if beatCount % 5 == 0 { return 5 }
+        if beatCount % 4 == 0 { return 4 }
+        if beatCount % 3 == 0 { return 3 }
+        if beatCount == 11 { return 4 }
+        return nil // nothing for 7, 11,
+        
     }
     
-    private var shouldShowScrollIndicator: Bool {
+    var body: some View {
+        let circleSize: CGFloat = beatCount <= 8 ? 18 : (beatCount <= 10 ? 16 : 14)
+        let spacing: CGFloat = beatCount <= 4 ? 16 : (beatCount <= 8 ? 12 : 8)
         
-        
-        let circleWidth: CGFloat = 14
-        let spacing: CGFloat = 4
-        let dividerWidth: CGFloat = 2
-        let dividerSpacing: CGFloat = 12
-        
-        let dividersCount = (beatCount - 1) / 4
-        let totalWidth = CGFloat(beatCount) * (circleWidth + spacing) + CGFloat(dividersCount) * (dividerWidth + dividerSpacing)
-        if totalWidth > UIScreen.main.bounds.width - 40 {
-            print("Scroll indicator! \(totalWidth)")
-        } else {
-            print("Booo. Screen width: \(UIScreen.main.bounds.width - 40)   totalWidth: \(totalWidth) "  )
-        }
-        return totalWidth > UIScreen.main.bounds.width - 40
+        //        ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: spacing) {
+            ForEach(0..<beatCount, id: \.self) { beat in
+                Circle()
+                    .fill(
+                        accentedBeats.contains(beat) ? Color.orange : // accented ones
+                        Color.gray.opacity(0.3) // default
+                    )
+                    .frame(width: circleSize, height: circleSize)
+                    .overlay(
+                        Circle()
+                            .fill(Color.purple)
+                            .opacity(beat == currentBeat ? 1.0 : 0.0)
+                    )
+                    .scaleEffect(beat == currentBeat ? 1.4 : 1.0)
+                    .shadow(color: accentedBeats.contains(beat) ? .orange : .clear, radius: accentedBeats.contains(beat) ? 6 : 0)
+                    .animation(.easeOut(duration: 0.1), value: currentBeat)
+                    .onTapGesture {
+                        onTapBeat(beat)
+                    }
+                    .padding(.trailing, ((beat + 1) % 4 == 0 && beat != beatCount - 1) ? 4 : 4)
+                if let interval = dividerInterval, (beat + 1) % interval == 0 && beat != beatCount - 1 {
+                    Rectangle()
+                        .fill(Color.orange.opacity(0.3))
+                        .frame(width: 2, height: 20)
+                        .padding(.trailing, 4)
+                }
+            }
             
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .frame(height:50)
+
     }
 }
+
 
 
 
@@ -251,8 +235,8 @@ struct ContentView: View {
                     )
                     
                     .accentColor(.orange)
-                    .onChange(of: metro.bpm) {
-                        metro.setBPM(metro.bpm)
+                    .onChange(of: metro.bpm) { newValue in
+                        metro.setBPM(newValue)
                     }
                     
                     Text("\(Int(metro.bpm)) BPM").mainStyle()
@@ -262,6 +246,7 @@ struct ContentView: View {
                     AccentPickerView(
                         beatCount: Int(metro.timeSigTop),
                         accentedBeats: metro.accentedBeats,
+                        currentBeat: metro.currentBeat,
                         onTapBeat: { beat in
                             metro.toggleAccent(beat: beat)
                         }
@@ -309,7 +294,7 @@ struct ContentView: View {
                             Text("Top value").generalTextStyle().foregroundStyle(Color(.white))
                             Slider(
                                 value: $metro.timeSigTop,
-                                in: 1...16,
+                                in: 1...12,
                                 step: 1,
                                 onEditingChanged: { isEditing in
                                     if !isEditing {
