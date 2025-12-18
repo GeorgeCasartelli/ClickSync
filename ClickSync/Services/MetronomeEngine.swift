@@ -35,7 +35,11 @@ class MetronomeEngine {
     
     private(set) var soundPairs: [String: (hi: String, lo: String)] = [:]
     private(set) var accentedBeats: Set<Int> = [0]
+    private(set) var currentBeat: Int = 0
     
+    private var displayLink: CADisplayLink?
+    
+    var onBeatChange: ((Int) -> Void)?
     init() {
         soundPairs = buildSoundPairs()
         
@@ -159,13 +163,38 @@ class MetronomeEngine {
         return results
     }
     
+    
     func start() {
         sequencer.play()
+        startBeatTracking()
     }
     
     func stop() {
         sequencer.stop()
         sequencer.rewind()
+        displayLink?.invalidate()
+        currentBeat = 0
+    }
+    
+    private func startBeatTracking() {
+        displayLink?.invalidate()
+        
+        displayLink = CADisplayLink(target: self, selector: #selector(updateBeat))
+        displayLink?.add(to: .main, forMode: .common)
+    }
+    
+    @objc private func updateBeat() {
+        let position = sequencer.currentPosition.beats
+        let newBeat = Int(position) % timeSigTop
+        
+        if newBeat != currentBeat {
+            currentBeat = newBeat
+            print("\(currentBeat + 1)")
+            
+            DispatchQueue.main.async{ [weak self] in
+                self?.onBeatChange?(newBeat)
+            }
+        }
     }
     
     func togglePlay() {
@@ -174,6 +203,7 @@ class MetronomeEngine {
     
     func setTempo(_ bpm: Double) {
         sequencer.setTempo(bpm)
+
     }
     
     func setVolume(hi: Float? = nil, lo: Float? = nil){
