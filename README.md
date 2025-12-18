@@ -7,7 +7,7 @@ This project makes use of AudioKit and MultipeerConnectivity
 Currently still a work in progress, but thought I'd now track milestones!
 
 
-<img width="812" height="1478" alt="image" src="https://github.com/user-attachments/assets/d4d76c19-e816-4731-bdfc-d78f38f00ebc" />
+<img width="406" height="739" alt="image" src="https://github.com/user-attachments/assets/d4d76c19-e816-4731-bdfc-d78f38f00ebc" />
 
 
 #### MILESTONES
