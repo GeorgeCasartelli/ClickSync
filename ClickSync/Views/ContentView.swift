@@ -75,6 +75,7 @@ struct VolumeBar: View {
 struct ContentView: View {
     
     @StateObject var metro = MetronomeViewModel()
+    @StateObject private var multipeerManager =  MultipeerManager()
     @State private var stepValue = false;
     
     let bottomValues = [1.0, 2.0, 4.0, 8.0]
@@ -99,7 +100,13 @@ struct ContentView: View {
                 Color(red: 0.06, green: 0.06, blue: 0.06)
                     .ignoresSafeArea()
                 
+                
                 VStack(spacing: 20) {
+                    
+                    NavigationLink("View Network Shit") {
+                        NetworkView(multipeerManager: multipeerManager)
+                    }
+                    
                     Text("Metronome").mainStyle()
                     
                     ZStack{
@@ -108,7 +115,11 @@ struct ContentView: View {
                             .frame(width: metro.isPlaying ? 120 : 80,
                                    height: metro.isPlaying ? 120 : 80)
                             .animation(.easeOut(duration: 0.6).repeatForever(autoreverses: true), value: metro.isPlaying)
-                        Button(action: metro.togglePlay) {
+                        Button {
+                            metro.togglePlay()
+                            multipeerManager.sendCommand(metro.isPlaying ? ["action": "start", "sender": "master"] : ["action": "stop", "sender": "master"])
+                        } label: {
+                            
                             Text(metro.isPlaying ? "⏸︎" : "▶︎")
                                 .font(.system(size: 60, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
@@ -168,6 +179,8 @@ struct ContentView: View {
                         .background(.orange)
                         .cornerRadius(10)
                         
+                        
+                        
                         //                    Slider(
                         //                        value: $metro.hiVolume, in: 0...5.0, step: 0.05
                         //                    )
@@ -196,14 +209,28 @@ struct ContentView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Home")
+            
             //            .navigationBarTitleDisplayMode(.inline)
             //            .toolbarBackground(Color(red: 0.06, green: 0.06, blue: 0.06), for: .navigationBar)
             //            .toolbarBackground(.visible, for: .navigationBar)
             
+        }.onChange(of: multipeerManager.lastAction) { action in
+            guard let action = action else { return }
+            
+            if multipeerManager.role == .client {
+                switch action {
+                case "start":
+                    metro.start()
+                    
+                case "stop":
+                    metro.stop()
+                    
+                default:
+                    break
+                }
+            }
         }
-        
-        
+ 
     }
     
 }
