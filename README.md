@@ -22,11 +22,11 @@ Sometimes cloning this into a new XCode has some problems.
 
 Ensure to do:
 
-Project Settings -> Signing & Capabilities
+- Project Settings -> Signing & Capabilities
 
-Add new Capability -> Background Modes
+- Add new Capability -> Background Modes
 
-Check "Audio, AirPlay, and Picture in Picture"
+- Check "Audio, AirPlay, and Picture in Picture"
 
 
 If peer to peer network connection isn't working:
