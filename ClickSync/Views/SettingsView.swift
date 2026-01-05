@@ -66,7 +66,7 @@ struct SettingsView: View {
                                         VolumeBar(label: "HI", value: $metro.hiVolume, color: .orange)
                                         VolumeBar(label: "LO", value: $metro.loVolume, color: .orange)
                                     }
-                                    Spacer()
+//                                    Spacer()
                                     
                                     Button{
                                         withAnimation{
@@ -80,7 +80,7 @@ struct SettingsView: View {
                                     .background(.orange)
                                     .cornerRadius(10)
                                 }
-                                .padding()
+
                                 NavigationLink {
                                     SoundPickerView(
                                         availableSounds: metro.availableSoundNames, selectedSound: metro.selectedSoundName) { newSound in
@@ -98,14 +98,19 @@ struct SettingsView: View {
                         .frame(maxWidth:.infinity,maxHeight: .infinity)
                         .padding()
                     }
-                    .frame(maxWidth:        .infinity,maxHeight: .infinity)
+//                    .frame(maxWidth:        .infinity,maxHeight: .infinity)
                     .cornerRadius(20)
                     .padding()
                 case .info:
-                    VStack {
-                        Text("This is a metronome app! Use it like a metronome!").generalTextStyle()
+                    ZStack {
+                        Color(.orange).opacity(0.3)
+                        
+                        VStack {
+                            Text("This is a metronome app! Use it like a metronome!").generalTextStyle()
+                        }
                     }
                     .frame(maxWidth:        .infinity,maxHeight: .infinity)
+                    .cornerRadius(20)
                     .padding()
                 }
             }.frame(width: 350, height: 400) // box size
