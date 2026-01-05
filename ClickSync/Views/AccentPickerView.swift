@@ -28,7 +28,6 @@ struct AccentPickerView: View {
         let circleSize: CGFloat = beatCount <= 8 ? 18 : (beatCount <= 10 ? 16 : 14)
         let spacing: CGFloat = beatCount <= 4 ? 16 : (beatCount <= 8 ? 12 : 8)
         
-        //        ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: spacing) {
             ForEach(0..<beatCount, id: \.self) { beat in
                 BeatCircle(

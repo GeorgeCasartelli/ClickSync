@@ -23,10 +23,9 @@ enum DeviceRole {
 
 
 class MultipeerManager: NSObject, ObservableObject {
-    @Published var receivedWord: String = "Waiting for a word..." // when this changes screen will update
+
     @Published var connectedPeers: [String] = []
     @Published var role: DeviceRole = .none
-    
     @Published var lastAction: String?
     
     private let myPeerID: MCPeerID // nametag

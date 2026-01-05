@@ -51,7 +51,13 @@ struct VolumeBar: View {
     let label: String
     @Binding var value: Float
     let color: Color
-
+    
+    let minVol: Float = 0
+    let maxVol: Float = 8.0
+    let barHeight: Float = 120
+    
+    @State private var dragStartValue: Float = 1.0
+  
     var body: some View {
         VStack {
             Text(label)
@@ -62,177 +68,94 @@ struct VolumeBar: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(color)
-                        .frame(height: CGFloat(value / 5.0) * 120),
+                        .frame(height: CGFloat(value / maxVol) * 120),
                     alignment: .bottom
                 )
                 .frame(width: 36, height: 120)
+                .gesture(
+                    DragGesture()
+                        .onChanged { drag in
+                            
+                            let dragAmount = -Float(drag.translation.height) + Float(dragStartValue)
+                             
+                            let clamped = min(max(dragAmount, 0.0), barHeight)
+                            let mapped = clamped / barHeight * maxVol
+                            value = Float(mapped)
+
+                        }
+                        .onEnded { _ in
+                            // nothing to persist; next drag will capture new start
+                            dragStartValue = value / maxVol * barHeight
+
+                            
+                        }
+
+                                    
+                )
         }
+        
     }
 }
 
 
 
 struct ContentView: View {
+    @StateObject private var multipeerManager: MultipeerManager
+    @StateObject private var metroVM: MetronomeView.ViewModel
+    @StateObject private var networkVM: NetworkViewModel
     
-    @StateObject var metro = MetronomeViewModel()
-    @StateObject private var multipeerManager =  MultipeerManager()
-    @State private var stepValue = false;
+    @State private var showNetworkView = false
     
-    let bottomValues = [1.0, 2.0, 4.0, 8.0]
-    @State private var bottomIndex: Double = 1
-    
-    var bottomBinding: Binding<Double> {
-        Binding(
-            get: {
-                // Convert actual bottom value → index
-                log2(metro.timeSigBtm)
-            },
-            set: { newIndex in
-                // Update actual model in real-time
-                metro.timeSigBtm = pow(2, newIndex)
-            }
-        )
+    init() {
+        let mpManager = MultipeerManager()
+        _multipeerManager = StateObject(wrappedValue: mpManager)
+        _metroVM = StateObject(wrappedValue: MetronomeView.ViewModel())
+        _networkVM = StateObject(wrappedValue: NetworkViewModel(manager: mpManager))
     }
     
     var body: some View {
+        //        NavigationStack {
         NavigationStack {
-            ZStack {
+            ZStack{
                 Color(red: 0.06, green: 0.06, blue: 0.06)
                     .ignoresSafeArea()
                 
-                
-                VStack(spacing: 20) {
-                    
-                    NavigationLink("View Network Shit") {
-                        NetworkView(multipeerManager: multipeerManager)
-                    }
-                    
-                    Text("Metronome").mainStyle()
-                    
-                    ZStack{
-                        Circle()
-                            .fill(Color.orange.opacity(0.3))
-                            .frame(width: metro.isPlaying ? 120 : 80,
-                                   height: metro.isPlaying ? 120 : 80)
-                            .animation(.easeOut(duration: 0.6).repeatForever(autoreverses: true), value: metro.isPlaying)
-                        Button {
-                            metro.togglePlay()
-                            multipeerManager.sendCommand(metro.isPlaying ? ["action": "start", "sender": "master"] : ["action": "stop", "sender": "master"])
-                        } label: {
-                            
-                            Text(metro.isPlaying ? "⏸︎" : "▶︎")
-                                .font(.system(size: 60, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
-                                .frame(width: 100, height: 100)
-                                .background(
-                                    Circle()
-                                        .fill(metro.isPlaying ? Color.orange : Color.teal.opacity(0.4))
-                                        .shadow(radius: 4)
-                                )
-                                .scaleEffect(metro.isPlaying ? 1.05 : 1.0)
-                                .animation(.spring(response: 0.3, dampingFraction: 0.5), value: metro.isPlaying)
-                        }
-                    }
-                    
-                    
-                    VStack(spacing: 6) {
-                        
-                        BPMControl(bpm: $metro.bpm)
-                            .onChange(of: metro.bpm) { newValue in
-                                metro.setBPM(newValue)
-                            }.padding()
-                        
-                        
-                        VStack(spacing: 12) {
-                            TimeSignaturePanel(top: $metro.timeSigTop, bottom: $metro.timeSigBtm)
-                                .onChange(of: metro.timeSigTop) { _ in
-                                    metro.updateTimeSignature(top: metro.timeSigTop, bottom: metro.timeSigBtm)}
-                        }
-                        
-                        AccentPickerView(
-                            beatCount: Int(metro.timeSigTop),
-                            accentedBeats: metro.accentedBeats,
-                            currentBeat: metro.currentBeat,
-                            bpm: metro.bpm,
-                            onTapBeat: { beat in
-                                metro.toggleAccent(beat: beat)
-                            }
-                        )
-                        
-                        Button(action: metro.tapTempo) {
-                            Text("TAP")
-                                .embossedLabelStyle()
-                                .padding()
-                                .foregroundColor(.white)
-                                .background(.orange)
-                                .cornerRadius(10)
-                        }
-                        
-                        NavigationLink("Select Sound") {
-                            SoundPickerView(
-                                availableSounds: metro.availableSoundNames, selectedSound: metro.selectedSoundName) { newSound in
-                                    metro.changeSound(to: newSound)
-                                }
-                        }
-                        .padding()
-                        .foregroundColor(.white)
-                        .background(.orange)
-                        .cornerRadius(10)
-                        
-                        
-                        
-                        //                    Slider(
-                        //                        value: $metro.hiVolume, in: 0...5.0, step: 0.05
-                        //                    )
-                        //                    .onChange(of: metro.hiVolume) { newValue in
-                        //                        metro.setVolume(hi: Float(newValue))
-                        //                    }
-                        //                    Slider(
-                        //                        value: $metro.loVolume, in: 0...5.0, step: 0.05
-                        //                    )
-                        //                    .onChange(of: metro.loVolume) { newValue in
-                        //                        metro.setVolume(lo: Float(newValue))
-                        //                    }
-                        //                    HStack(spacing:40) {
-                        //                        HStack(spacing: 16) {
-                        //                            VolumeBar(label: "HI", value: $metro.hiVolume, color: .orange)
-                        //                            VolumeBar(label: "LO", value: $metro.loVolume, color: .orange)
-                        //                                .padding()
-                        //
-                        //                        }
-                        //                    }
-                        
-                        //                        Button(action: metro.setSequence)
-                    }
-                    
-                    
-                }
-                .padding()
-            }
-            
-            //            .navigationBarTitleDisplayMode(.inline)
-            //            .toolbarBackground(Color(red: 0.06, green: 0.06, blue: 0.06), for: .navigationBar)
-            //            .toolbarBackground(.visible, for: .navigationBar)
-            
-        }.onChange(of: multipeerManager.lastAction) { action in
-            guard let action = action else { return }
-            
-            if multipeerManager.role == .client {
-                switch action {
-                case "start":
-                    metro.start()
-                    
-                case "stop":
-                    metro.stop()
-                    
-                default:
-                    break
-                }
-            }
-        }
+                VStack {
+                    AppNavBar(showNetworkView: $showNetworkView).frame(height:40)
  
+                    
+                    ZStack {
+                        MetronomeView()
+                            .environmentObject(multipeerManager)
+                            .environmentObject(metroVM)
+                        
+                        if showNetworkView {
+                            Color.black.opacity(0.4)
+                                .ignoresSafeArea()
+                                .blur(radius: 2)
+                                .onTapGesture {
+                                    withAnimation { showNetworkView = false}
+                                }
+                            
+                            SettingsView()
+                                .environmentObject(networkVM)
+                                .environmentObject(metroVM)
+                                .frame(width: 350, height: 400)
+                                .background(.ultraThinMaterial)
+                                .cornerRadius(20)
+                                .shadow(radius: 10)
+                                .transition(.scale.combined(with: .opacity))
+                                .zIndex(1)
+                        }
+                    }.animation(.easeInOut, value: showNetworkView)
+                    
+                }
+                
+            }
+            
+            
+        }
     }
-    
 }
 
 
