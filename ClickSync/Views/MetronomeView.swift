@@ -79,21 +79,7 @@ struct MetronomeView: View {
                                 .background(.orange)
                                 .cornerRadius(10)
                         }
-                        
-                        NavigationLink("Select Sound") {
-                            SoundPickerView(
-                                availableSounds: metro.availableSoundNames, selectedSound: metro.selectedSoundName) { newSound in
-                                    metro.changeSound(to: newSound)
-                                }
-                        }
-                        .padding()
-                        .foregroundColor(.white)
-                        .background(.orange)
-                        .cornerRadius(10)
-                        
-                        
-                        
-                        
+                                             
                     }
                     
                     
