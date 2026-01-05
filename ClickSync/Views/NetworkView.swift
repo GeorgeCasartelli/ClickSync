@@ -8,69 +8,58 @@
 import SwiftUI
 
 struct NetworkView: View {
-    @StateObject var multipeerManager: MultipeerManager
+    @EnvironmentObject var viewModel: NetworkViewModel
     
     var body: some View {
         ZStack {
-            Color(red: 0.06, green: 0.06, blue: 0.06)
+            Color(.orange)
+                .opacity(0.3)
                 .ignoresSafeArea()
             
             VStack{
-                Text("Network view").mainStyle()
-                if multipeerManager.role == .none {
+                
+                if viewModel.role == .none {
                     VStack(spacing: 20) {
-                        Text("Choose Role:")
-                            .font(.headline)
+                        Text("Choose role: ")
+                            .generalTextStyle()
+                            .foregroundStyle(.white)
                         
                         Button("Start as Master") {
-                            multipeerManager.startAsMaster()
+                            viewModel.startAsMaster()
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.purple)
                         
                         Button("Join as Client") {
-                            multipeerManager.startAsClient()
+                            viewModel.startAsClient()
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.blue)
                     }
                 } else {
-                    // Show current role
-                    Text("Role: \(multipeerManager.role == .master ? "Master" : "Client")")
+                    Text("Role: \(viewModel.role == .master ? "Master" : "Client")")
                         .font(.headline)
-                        .foregroundColor(multipeerManager.role == .master ? .purple : .blue)
+                        .foregroundColor(viewModel.role == .master ? .purple : .blue)
                     
                     Button("Disconnect") {
-                        multipeerManager.stop()
+                        viewModel.disconnect()
                     }
                     .buttonStyle(.bordered)
                     .tint(.red)
                 }
-                
+            
                 Divider()
                 
                 Text("Connected Devices:").generalTextStyle()
                     .font(.headline)
-                if multipeerManager.connectedPeers.isEmpty {
+                if viewModel.peers.isEmpty {
                     Text("No devices connected").generalTextStyle()
                         .foregroundColor(.gray)
                 } else {
-                    ForEach(multipeerManager.connectedPeers, id: \.self) { peer in
+                    ForEach(viewModel.peers, id: \.self) { peer in
                         Text(peer)
                             .foregroundColor(.green)
                     }
-                }
-                
-                Button {
-                    multipeerManager.sendCommand(["action": "start", "sender": "master"])
-                } label: {
-                    Text("Send command").generalTextStyle()
-                }
-                
-                Button {
-                    multipeerManager.sendCommand(["action": "stop", "sender": "master"])
-                } label: {
-                    Text("Send command").generalTextStyle()
                 }
             }
         }
