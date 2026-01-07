@@ -9,7 +9,7 @@ import SwiftUI
 
 struct MetronomeView: View {
     
-    @EnvironmentObject var metro: ViewModel
+    @EnvironmentObject var metroVM: ViewModel
     @EnvironmentObject private var multipeerManager:  MultipeerManager
 
 
@@ -27,51 +27,51 @@ struct MetronomeView: View {
                     ZStack{
                         Circle()
                             .fill(Color.orange.opacity(0.3))
-                            .frame(width: metro.isPlaying ? 120 : 80,
-                                   height: metro.isPlaying ? 120 : 80)
-                            .animation(.easeOut(duration: 0.6).repeatForever(autoreverses: true), value: metro.isPlaying)
+                            .frame(width: metroVM.isPlaying ? 120 : 80,
+                                   height: metroVM.isPlaying ? 120 : 80)
+                            .animation(.easeOut(duration: 0.6).repeatForever(autoreverses: true), value: metroVM.isPlaying)
                         Button {
-                            metro.togglePlay(multipeer: multipeerManager)
+                            metroVM.togglePlay(multipeer: multipeerManager)
                         } label: {
                             
-                            Text(metro.playIcon)
+                            Text(metroVM.playIcon)
                                 .font(.system(size: 60, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                                 .frame(width: 100, height: 100)
                                 .background(
                                     Circle()
-                                        .fill(metro.playButtonColor)
+                                        .fill(metroVM.playButtonColor)
                                         .shadow(radius: 4)
                                 )
-                                .scaleEffect(metro.pulseSize)
-                                .animation(.spring(response: 0.3, dampingFraction: 0.5), value: metro.isPlaying)
+                                .scaleEffect(metroVM.pulseSize)
+                                .animation(.spring(response: 0.3, dampingFraction: 0.5), value: metroVM.isPlaying)
                         }
                     }
                     
                     
                     VStack(spacing: 6) {
                         
-                        BPMControl(bpm: $metro.bpm)
+                        BPMControl(bpm: $metroVM.bpm)
                             .padding()
                         
                         
                         VStack(spacing: 12) {
-                            TimeSignaturePanel(top: $metro.timeSigTop, bottom: $metro.timeSigBtm)
-                                .onChange(of: metro.timeSigTop) { _ in
-                                    metro.updateTimeSignature(top: metro.timeSigTop, bottom: metro.timeSigBtm)}
+                            TimeSignaturePanel(top: $metroVM.timeSigTop, bottom: $metroVM.timeSigBtm)
+                                .onChange(of: metroVM.timeSigTop) { _ in
+                                    metroVM.updateTimeSignature(top: metroVM.timeSigTop, bottom: metroVM.timeSigBtm)}
                         }
                         
                         AccentPickerView(
-                            beatCount: Int(metro.timeSigTop),
-                            accentedBeats: metro.accentedBeats,
-                            currentBeat: metro.currentBeat,
-                            bpm: metro.bpm,
+                            beatCount: Int(metroVM.timeSigTop),
+                            accentedBeats: metroVM.accentedBeats,
+                            currentBeat: metroVM.currentBeat,
+                            bpm: metroVM.bpm,
                             onTapBeat: { beat in
-                                metro.toggleAccent(beat: beat)
+                                metroVM.toggleAccent(beat: beat)
                             }
                         )
                         
-                        Button(action: metro.tapTempo) {
+                        Button(action: metroVM.tapTempo) {
                             Text("TAP")
                                 .embossedLabelStyle()
                                 .padding()
@@ -85,10 +85,6 @@ struct MetronomeView: View {
                     
                 }
                 .padding()
-            }.onChange(of: multipeerManager.lastAction) { action in
-                guard let action = action else { return }
-                
-                metro.handleRemoteAction(action, role: multipeerManager.role)
             }
         }
     }

@@ -50,16 +50,47 @@ extension MetronomeView {
                 self?.currentBeat = beat
             }
         }
+        
       
         func togglePlay(multipeer: MultipeerManager) {
-            isPlaying.toggle()
-            engine.togglePlay()
-            multipeer.sendCommand(networkCommand)
+            if !isPlaying {
+                // calculate the next even second for syncro start
+                let now = Date().timeIntervalSince1970
+                let nextEvenSecond = ceil(now) + 1.0
+                let command: [String: Any] = [
+                    "action": "start",
+                    "sender": "master",
+                    "startTime": nextEvenSecond
+                ]
+                print("MASTER: Sending CMD with startTime")
+                multipeer.sendCommand(command)
+                scheduleStart(at: nextEvenSecond) // wait to start syncro
+            } else {
+                isPlaying = false
+                engine.stop()
+                multipeer.sendCommand(["action":"stop", "sender":"master"])
+            }
         }
         
+        private func scheduleStart(at timestamp: Double) {
+            let now = Date().timeIntervalSince1970
+            let delay = timestamp - now // calculate how long till target timestamp
+ 
+            guard delay > 0 else {
+                // ensure delay is positive
+                start()
+                return
+            }
+            
+            // schedule actual start
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [ weak self] in
+                self?.start()
+            }
+        }
         func start() {
             isPlaying = true
             engine.start()
+            print("Started clock at \(Date().timeIntervalSince1970)")
         }
         
         func stop() {
@@ -110,7 +141,7 @@ extension MetronomeView {
                 adjustedBPM = bpm * 2
             }
             
-            engine.setSequence(restart: true, top: Int(timeSigTop), bottom: Int(timeSigBtm))
+            engine.setSequence(restart: true, top: Int(timeSigTop))
             
             if Double(engine.timeSigBtm) != bottom {
                 engine.setTempo(adjustedBPM)
@@ -125,20 +156,31 @@ extension MetronomeView {
         }
         
         func bind(multipeer: MultipeerManager) {
-            multipeer.$lastAction
-                .compactMap { $0 }
-                .sink { [weak self] action in
-                    self?.handleRemoteAction(action, role: multipeer.role)
+            print("BIND: Setting subs")
+            multipeer.$lastCommand
+                .sink { [weak self] optionalCommand in
+                    print("SINK: Received the following: \(String(describing: optionalCommand))")
+                    guard let command = optionalCommand else { return }
+                    guard let action = command["action"] as? String else {return}
+                    self?.handleRemoteAction(action, role: multipeer.role, command: command)
                 }
                 .store(in: &cancellables)
         }
         
-        func handleRemoteAction(_ action: String, role: DeviceRole) {
-            guard role == .client else { return }
+        func handleRemoteAction(_ action: String, role: DeviceRole, command: [String: Any]) {
+            print("Handle remoe Action: Action: \(action), Role: \(role), command: \(command)")
+            guard role == .client else {
+                print("Not client, returning")
+                return
+            } // only follow if client
             
             switch action {
-            case "start": start()
-            case "stop": stop()
+            case "start":
+                if let startTime = command["startTime"] as? Double {
+                    scheduleStart(at: startTime)
+                }
+            case "stop":
+                stop()
             default: break
             }
         }

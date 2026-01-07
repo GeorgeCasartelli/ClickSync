@@ -11,7 +11,7 @@ import Foundation
 
 class MetronomeEngine {
     let engine = AudioEngine()
-    
+    	
     private let hiSampler = MIDISampler()
     private let loSampler = MIDISampler()
     
@@ -75,8 +75,7 @@ class MetronomeEngine {
         sequencer.enableLooping() // Allow short sequence to loop
     }
     
-    func setSequence(restart: Bool = false, top: Int? = nil, bottom: Int? = nil) {
-        guard let top = top else { return }
+    func setSequence(restart: Bool = false, top: Int) {
 
 //        accentedBeats = accentedBeats.filter { $0 < top }
         
@@ -88,9 +87,7 @@ class MetronomeEngine {
         loTrack.clear()
         
         sequencer.setLoopInfo(Duration(beats: Double(top)), loopCount: 0)
-        
-        
-        
+
         for beat in 0..<top {
             if accentedBeats.contains(beat) {
                 hiTrack?.add(noteNumber: 60, velocity: 127, position: Duration(beats: Double(beat)), duration: Duration(beats: 1))
@@ -102,11 +99,6 @@ class MetronomeEngine {
             sequencer.rewind()
         }
 
-        if let bottom = bottom {
-            timeSigBtm = bottom
-            
-        }
-        
         timeSigTop = top
     }
 
@@ -207,7 +199,6 @@ class MetronomeEngine {
     }
     
     func setVolume(hi: Float? = nil, lo: Float? = nil){
-        
         // if there is a value in hi or lo, set the variables
         if let hi = hi {
             hiMixer.volume = hi
@@ -218,6 +209,7 @@ class MetronomeEngine {
             loVolume = lo
         }
     }
+    
     func tap() -> Double? {
         let now = CACurrentMediaTime()
         
@@ -237,15 +229,11 @@ class MetronomeEngine {
                 if tapIntervals.count > 6 {
                     tapIntervals.removeFirst()
                 }
-                
-//                if !tapIntervals.isEmpty {
+
                     let avg = 60 / (Double(tapIntervals.reduce(0, +)) / Double(tapIntervals.count))
-//                }
                 currentAvgBPM = avg
                 setTempo(avg)
                 return avg
-                print(String(format: "Avg BPM = %.2f", (currentAvgBPM)))
-//                updateBPM(to: currentAvgBPM)
             } else {
                 tapTimestamps = []
                 tapIntervals = []

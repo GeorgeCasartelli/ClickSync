@@ -14,8 +14,7 @@ struct SoundPickerView: View {
     var body: some View {
         ZStack {
             // Background: matte metal
-            Color(red: 0.06, green: 0.06, blue: 0.06)
-                .ignoresSafeArea()
+            Color(.red).opacity(0.4)
 
             VStack(spacing: 20) {
                 Text("Sound Selector")
@@ -50,7 +49,6 @@ struct SoundPickerView: View {
             }
             .padding(.top, 30)
         }
-        .navigationTitle("Sound")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
