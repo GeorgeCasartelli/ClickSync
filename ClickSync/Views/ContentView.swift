@@ -54,6 +54,11 @@ struct ContentView: View {
  
                     UnixTimeView()
                         .foregroundStyle(.white)
+                    Spacer()
+                    
+                    Text(String("Beat: \(Int(metroVM.currentSequencerPosition) + 1)"))
+                        .foregroundColor(.white)
+                        .padding()
                     ZStack {
                         MetronomeView()
                             .environmentObject(multipeerManager)

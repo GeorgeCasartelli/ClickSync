@@ -79,7 +79,14 @@ struct MetronomeView: View {
                                 .background(.orange)
                                 .cornerRadius(10)
                         }
-                                             
+                        
+                        if metroVM.showStatus {
+                            Text("Start CMD @ \(metroVM.cmdReceivedTime)").foregroundStyle(.white)
+                        }
+                        
+                        if metroVM.isPlaying {
+                            Text("Now Playing @ \(metroVM.startTime)").foregroundStyle(.white)
+                        }
                     }
                     
                     

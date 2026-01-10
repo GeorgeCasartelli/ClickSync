@@ -9,6 +9,12 @@ extension MetronomeView {
             didSet{ engine.setTempo(bpm)}
         }
         
+        @Published var currentSequencerPosition: Double = 0
+        
+        @Published var showStatus: Bool = false;
+        @Published var startTime: Double = 0.0
+        @Published var cmdReceivedTime: Double = 0.0
+        
         
         @Published var isPlaying: Bool = false
         @Published var selectedSoundName: String = "Glass"
@@ -51,7 +57,6 @@ extension MetronomeView {
             }
         }
         
-      
         func togglePlay(multipeer: MultipeerManager) {
             if !isPlaying {
                 // calculate the next even second for syncro start
@@ -65,44 +70,73 @@ extension MetronomeView {
                 print("MASTER: Sending CMD with startTime")
                 multipeer.sendCommand(command)
                 scheduleStart(at: nextEvenSecond) // wait to start syncro
+//                start()
             } else {
                 isPlaying = false
-                engine.stop()
+                engine.stopTransport()
                 multipeer.sendCommand(["action":"stop", "sender":"master"])
             }
         }
         
+        
+        
         private func scheduleStart(at timestamp: Double) {
             let now = Date().timeIntervalSince1970
+            let warmup = 0.25
+            
+            let warmupDelay = (timestamp - warmup) - now
             let delay = timestamp - now // calculate how long till target timestamp
  
-            guard delay > 0 else {
-                // ensure delay is positive
-                start()
-                return
+            
+            if warmupDelay > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + warmupDelay) { [weak self] in
+                    guard let self = self else { return } // avoid individual unconditionals for following
+                    self.engine.setMuted(true)
+                    self.engine.prepareTransport()
+                }
+            } else {
+                engine.setMuted(true);
+                engine.prepareTransport()
             }
             
-            // schedule actual start
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [ weak self] in
-                self?.start()
+            if delay > 0 {
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [ weak self ] in
+                    guard let self = self else { return }
+                    self.engine.startTransportFromtZero()
+                    self.engine.setMuted(false)
+                    self.isPlaying = true;
+                    self.startTime = Date().timeIntervalSince1970
+                }
+            } else {
+                engine.startTransportFromtZero()
+                engine.setMuted(false)
+                isPlaying = true
+                startTime = Date().timeIntervalSince1970
             }
+                // ensure delay is positive
+
         }
+            
+            // schedule actual start
+
+        
         func start() {
             isPlaying = true
-            engine.start()
-            print("Started clock at \(Date().timeIntervalSince1970)")
+            if let startHost = engine.hostTimeForUnixTimestamp(startTime) {
+                engine.playTransport(atHostTime: startHost)
+            }
+
+//            startPositionUpdates()
+            startTime = Date().timeIntervalSince1970
+            print("Started clock at \(startTime)")
         }
         
         func stop() {
             isPlaying = false
-            engine.stop()
+            engine.stopTransport()
         }
-        
-//        func setBPM(_ newBPM: Double) {
-//            bpm = newBPM
-//            engine.setTempo(newBPM)
-//        }
-        
+
         func changeSound( to name: String) {
             selectedSoundName = name
             engine.loadSoundPairs(named: name)
@@ -116,8 +150,7 @@ extension MetronomeView {
         
         func setVolume(hi: Float? = nil, lo: Float? = nil) {
             engine.setVolume(hi: hi, lo: lo)
-//            hiVolume = engine.hiVolume
-//            loVolume = engine.loVolume
+
         }
         
         func resetVolume() {
@@ -178,9 +211,13 @@ extension MetronomeView {
             case "start":
                 if let startTime = command["startTime"] as? Double {
                     scheduleStart(at: startTime)
+//                    start()
+                    showStatus = true;
+                    cmdReceivedTime = Date().timeIntervalSince1970
                 }
             case "stop":
                 stop()
+                showStatus = false;
             default: break
             }
         }

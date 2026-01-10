@@ -17,6 +17,7 @@ class MetronomeEngine {
     
     private var hiMixer: Mixer!
     private var loMixer: Mixer!
+    private var mainMixer: Mixer!
     
     let sequencer = AppleSequencer()
     
@@ -36,25 +37,91 @@ class MetronomeEngine {
     private(set) var soundPairs: [String: (hi: String, lo: String)] = [:]
     private(set) var accentedBeats: Set<Int> = [0]
     private(set) var currentBeat: Int = 0
+    private(set) var loopLengthBeats: Double = 4.0
+    
+    @Published private(set) var currentPositionInBeats: Double = 0
+    
+    private var sequencerStartTime: Double = 0
     
     private var displayLink: CADisplayLink?
     
     var onBeatChange: ((Int) -> Void)?
+    
+    ///   VARIABLES FOR SEQUENCER:
+    private var tickTimer: DispatchSourceTimer?
+    private var nextTickHostTime: UInt64 = 0
+    private var tickPeriodSeconds: Double = 0
+    private let tickLookahead: Double = 0.10     // schedule 100ms ahead
+    private let tickInterval: Double = 0.02      // reschedule every 20ms
+    private var startHostTime: UInt64 = 0
+    private var beatIndex: Int = 0
+
+    private(set) var tempo: Double = 120
+    
+    private var session: AVAudioSession { AVAudioSession.sharedInstance() }
     init() {
+        
         soundPairs = buildSoundPairs()
         
         hiMixer = Mixer(hiSampler)
         loMixer = Mixer(loSampler)
         
         // put samplers in a mixer
-        let mixer = Mixer([hiMixer, loMixer])
-        engine.output = mixer
-        mixer.volume = 10.0
+        mainMixer = Mixer([hiMixer, loMixer])
+        engine.output = mainMixer
+        mainMixer.volume = 10.0
         
         initialiseSequencer()
+        sequencer.rewind()
+//        sequencer.play() // run sequencer continuously
         // Connect sequencer to sampler
         
+        configureAudioSession()
+        
         try? engine.start()  // Start AudioKit
+    }
+    
+    
+//MARK: Audio session config
+    private func configureAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        
+        do {
+            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            // starting w low buffer, 256 frames *48k is 5.3ms
+            try session.setPreferredIOBufferDuration(0.005);
+            try session.setActive(true)
+            print("Audio session: samplerate = \(session.sampleRate), buf=\(session.ioBufferDuration), outLatency=\(session.outputLatency)")
+        } catch {
+            print("Audio session config error: \(error)")
+        }
+    }
+    
+    private func secondsToHostTime(_ seconds: Double) -> UInt64 {
+        return AVAudioTime.hostTime(forSeconds: seconds)
+    }
+    
+    private func hostTimeToSeconds(_ hostTime: UInt64) -> Double{
+        return AVAudioTime.seconds(forHostTime: hostTime)
+    }
+    
+    private func currentHostTime() -> UInt64? {
+        engine.avEngine.outputNode.lastRenderTime?.hostTime
+    }
+    
+    private func updateTickPeriod() {
+        // quaver beats in seaconds
+        tickPeriodSeconds = 60.0 / Double(tempo)
+    }
+    
+    
+    func setMuted(_ muted: Bool) {
+        mainMixer.volume = muted ? 0.0 : 10.0
+    }
+    
+    
+    func preroll() {
+        do { try sequencer.preroll() } catch { print("Preroll err: \(error)") }
     }
     
     private func initialiseSequencer() {
@@ -74,6 +141,8 @@ class MetronomeEngine {
         sequencer.setTempo(120)
         sequencer.enableLooping() // Allow short sequence to loop
     }
+    
+    
     
     func setSequence(restart: Bool = false, top: Int) {
 
@@ -155,17 +224,129 @@ class MetronomeEngine {
         return results
     }
     
-    
-    func start() {
-        sequencer.play()
-        startBeatTracking()
+    func prepareTransport() {
+        if !sequencer.isPlaying {
+            do { try sequencer.preroll() } catch { print("preroll err: \(error)")}
+        }
     }
     
-    func stop() {
+    func startTransportFromtZero() {
         sequencer.stop()
         sequencer.rewind()
+        do { try sequencer.preroll() } catch {}
+        sequencer.play()
+    }
+    
+    //MARK: Sequencer Scheduling
+    func playTransport(atHostTime hostTime: UInt64) {
+        stopTransport()
+        
+        startBeatTracking()
+        updateTickPeriod()
+        
+        startHostTime = hostTime
+        nextTickHostTime = hostTime
+        beatIndex = 0
+        currentBeat = 0
+        
+        startTickScheduler()
+    }
+    
+    func stopTransport() {
+        tickTimer?.cancel()
+        tickTimer = nil
+        
         displayLink?.invalidate()
         currentBeat = 0
+        beatIndex = 0
+    }
+    
+    //MARK: AI CODE HERE TO
+    private func startTickScheduler() {
+        let timer = DispatchSource.makeTimerSource(queue:  DispatchQueue.global(qos: .userInteractive))
+        timer.schedule(deadline: .now(), repeating: tickInterval)
+        
+        timer.setEventHandler { [weak self] in
+            guard let self else {return}
+            self.scheduleTicksLookahead()
+        }
+        
+        tickTimer = timer
+        timer.resume()
+    }
+    
+    private func scheduleTicksLookahead() {
+        guard let nowHost = currentHostTime() else { return }
+
+        let lookaheadHost = nowHost &+ secondsToHostTime(tickLookahead)
+
+        while nextTickHostTime <= lookaheadHost {
+            // Decide hi/lo based on accents
+            let beat = beatIndex % timeSigTop
+            let isAccented = accentedBeats.contains(beat)
+
+            // Schedule sampler note exactly at hostTime
+            scheduleSamplerTick(accented: isAccented, hostTime: nextTickHostTime)
+
+            // Update beat state for UI (not audio-critical)
+            let uiBeat = beat
+            DispatchQueue.main.async { [weak self] in
+                self?.onBeatChange?(uiBeat)
+            }
+
+            // Advance
+            beatIndex += 1
+            let periodHost = secondsToHostTime(tickPeriodSeconds)
+            nextTickHostTime &+= periodHost
+        }
+    }
+
+    private func scheduleSamplerTick(accented: Bool, hostTime: UInt64) {
+        let nodeTime = AVAudioTime(hostTime: hostTime)
+        // For MIDISampler, trigger note with a scheduled MIDINoteMessage isn’t exposed directly,
+        // but AudioKit’s MIDISampler has `play(noteNumber:velocity:channel:)` which plays ASAP.
+        // We need a scheduled trigger. So we’ll do the next-best AudioKit-friendly approach:
+        // schedule on a high-priority queue with a spin to host time.
+        // It’s not perfect sample-accurate, but removes AppleSequencer jitter.
+
+        DispatchQueue.global(qos: .userInteractive).async { [weak self] in
+            guard let self else { return }
+            self.waitUntilHostTime(hostTime)
+            if accented {
+                self.hiSampler.play(noteNumber: 60, velocity: 127, channel: 0)
+            } else {
+                self.loSampler.play(noteNumber: 60, velocity: 127, channel: 0)
+            }
+        }
+    }
+
+    private func waitUntilHostTime(_ target: UInt64) {
+        // Busy-wait in short sleeps. This is a pragmatic compromise for an assignment.
+        // It will be far steadier than AppleSequencer jitter, and much steadier than UI timers.
+        while true {
+            guard let now = currentHostTime() else { return }
+            if now >= target { return }
+            // sleep ~0.2ms to avoid pegging CPU
+            usleep(200)
+        }
+    }
+    
+    func hostTimeForUnixTimestamp(_ timestamp: Double) -> UInt64? {
+        guard let nowHost = currentHostTime() else { return nil }
+        let nowUnix = Date().timeIntervalSince1970
+        let delta = timestamp - nowUnix
+        return nowHost &+ secondsToHostTime(delta)
+    }
+
+    //MARK: HERE
+    
+    var currentSequencerPosition: Double {
+        sequencer.currentPosition.beats.truncatingRemainder(dividingBy: loopLengthBeats)
+    }
+
+
+    func audioHostTime() -> UInt64? {
+        engine.avEngine.outputNode.lastRenderTime?.hostTime
     }
     
     private func startBeatTracking() {
@@ -189,13 +370,14 @@ class MetronomeEngine {
         }
     }
     
-    func togglePlay() {
-        sequencer.isPlaying ? stop() : start()
-    }
+//    func togglePlay() {
+//        sequencer.isPlaying ? stopTransport() : playTransport()
+//    }
     
     func setTempo(_ bpm: Double) {
-        sequencer.setTempo(bpm)
-
+//        sequencer.setTempo(bpm)
+        tempo = bpm
+        updateTickPeriod()
     }
     
     func setVolume(hi: Float? = nil, lo: Float? = nil){
