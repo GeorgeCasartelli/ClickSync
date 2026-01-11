@@ -55,6 +55,10 @@ class MetronomeEngine {
     private let tickInterval: Double = 0.02      // reschedule every 20ms
     private var startHostTime: UInt64 = 0
     private var beatIndex: Int = 0
+    
+    private var transportRunID = UUID()
+    private var isTransportRunning = false
+
 
     private(set) var tempo: Double = 120
     
@@ -241,24 +245,38 @@ class MetronomeEngine {
     func playTransport(atHostTime hostTime: UInt64) {
         stopTransport()
         
-        startBeatTracking()
-        updateTickPeriod()
+        transportRunID = UUID() // create new UUID for runtime
+        isTransportRunning = true
         
+        updateTickPeriod()
         startHostTime = hostTime
         nextTickHostTime = hostTime
         beatIndex = 0
         currentBeat = 0
         
+        DispatchQueue.main.async { [weak self] in
+            self?.onBeatChange?(0)
+        }
+        
         startTickScheduler()
     }
     
     func stopTransport() {
+        
+        // create new UUID for stop, invalidate previous runTime
+        transportRunID = UUID()
+        isTransportRunning = false
+        
         tickTimer?.cancel()
         tickTimer = nil
         
-        displayLink?.invalidate()
+        
         currentBeat = 0
         beatIndex = 0
+        
+        DispatchQueue.main.async { [ weak self ] in
+            self?.onBeatChange?(0)
+        }
     }
     
     //MARK: AI CODE HERE TO
@@ -302,16 +320,20 @@ class MetronomeEngine {
     }
 
     private func scheduleSamplerTick(accented: Bool, hostTime: UInt64) {
-        let nodeTime = AVAudioTime(hostTime: hostTime)
-        // For MIDISampler, trigger note with a scheduled MIDINoteMessage isn’t exposed directly,
-        // but AudioKit’s MIDISampler has `play(noteNumber:velocity:channel:)` which plays ASAP.
-        // We need a scheduled trigger. So we’ll do the next-best AudioKit-friendly approach:
-        // schedule on a high-priority queue with a spin to host time.
-        // It’s not perfect sample-accurate, but removes AppleSequencer jitter.
-
+        let runID = transportRunID
+        
+//        let nodeTime = AVAudioTime(hostTime: hostTime)
         DispatchQueue.global(qos: .userInteractive).async { [weak self] in
             guard let self else { return }
-            self.waitUntilHostTime(hostTime)
+            
+            // check if transport still running, if runID is still current
+            // check before and after delay
+            guard self.isTransportRunning, self.transportRunID == runID else {return }
+            self.waitUntilHostTime(hostTime, runID: runID)
+
+            guard self.isTransportRunning, self.transportRunID == runID else { return }
+            
+            // if here, transport is running, so play notes
             if accented {
                 self.hiSampler.play(noteNumber: 60, velocity: 127, channel: 0)
             } else {
@@ -320,10 +342,12 @@ class MetronomeEngine {
         }
     }
 
-    private func waitUntilHostTime(_ target: UInt64) {
-        // Busy-wait in short sleeps. This is a pragmatic compromise for an assignment.
-        // It will be far steadier than AppleSequencer jitter, and much steadier than UI timers.
+    private func waitUntilHostTime(_ target: UInt64, runID: UUID) {
+        // steadier solution for sequencing than appleSequencer
         while true {
+            // check if cancelled
+            if !isTransportRunning || transportRunID != runID { return }
+            
             guard let now = currentHostTime() else { return }
             if now >= target { return }
             // sleep ~0.2ms to avoid pegging CPU
@@ -349,26 +373,6 @@ class MetronomeEngine {
         engine.avEngine.outputNode.lastRenderTime?.hostTime
     }
     
-    private func startBeatTracking() {
-        displayLink?.invalidate()
-        
-        displayLink = CADisplayLink(target: self, selector: #selector(updateBeat))
-        displayLink?.add(to: .main, forMode: .common)
-    }
-    
-    @objc private func updateBeat() {
-        let position = sequencer.currentPosition.beats
-        let newBeat = Int(position) % timeSigTop
-        
-        if newBeat != currentBeat {
-            currentBeat = newBeat
-            print("\(currentBeat + 1)")
-            
-            DispatchQueue.main.async{ [weak self] in
-                self?.onBeatChange?(newBeat)
-            }
-        }
-    }
     
 //    func togglePlay() {
 //        sequencer.isPlaying ? stopTransport() : playTransport()

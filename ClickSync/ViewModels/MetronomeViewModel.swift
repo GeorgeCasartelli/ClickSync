@@ -44,6 +44,8 @@ extension MetronomeView {
         
         private let engine = MetronomeEngine()
         
+        private var runID = UUID() // runtime ID
+        
         init() {
             availableSoundNames = Array(engine.soundPairs.keys).sorted()
             
@@ -81,6 +83,8 @@ extension MetronomeView {
         
         
         private func scheduleStart(at timestamp: Double) {
+            let myRun = runID
+            
             let now = Date().timeIntervalSince1970
             let warmup = 0.25
             
@@ -90,11 +94,14 @@ extension MetronomeView {
             
             if warmupDelay > 0 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + warmupDelay) { [weak self] in
+                    
                     guard let self = self else { return } // avoid individual unconditionals for following
+                    guard self.runID == myRun else {return }
                     self.engine.setMuted(true)
                     self.engine.prepareTransport()
                 }
             } else {
+                guard runID == myRun else { return }
                 engine.setMuted(true);
                 engine.prepareTransport()
             }
@@ -103,12 +110,19 @@ extension MetronomeView {
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [ weak self ] in
                     guard let self = self else { return }
-                    self.engine.startTransportFromtZero()
+                    guard self.runID == myRun else {return }
+                    
+                    guard let startHost = self.engine.hostTimeForUnixTimestamp(timestamp) else { return}
+                    self.engine.playTransport(atHostTime: startHost)
+                    
                     self.engine.setMuted(false)
                     self.isPlaying = true;
                     self.startTime = Date().timeIntervalSince1970
                 }
             } else {
+                guard runID == myRun else { return }
+                
+                guard let startHost = engine.hostTimeForUnixTimestamp(timestamp) else { return }
                 engine.startTransportFromtZero()
                 engine.setMuted(false)
                 isPlaying = true
@@ -133,6 +147,7 @@ extension MetronomeView {
         }
         
         func stop() {
+            runID = UUID()
             isPlaying = false
             engine.stopTransport()
         }
