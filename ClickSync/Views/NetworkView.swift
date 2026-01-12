@@ -10,6 +10,7 @@ import SwiftUI
 struct NetworkView: View {
     @EnvironmentObject var networkVM: NetworkViewModel
     
+    
     var body: some View {
         ZStack {
             Color(.orange)

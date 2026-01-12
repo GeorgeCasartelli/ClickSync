@@ -32,7 +32,7 @@ class NetworkViewModel: ObservableObject {
     func startAsMaster() {manager.startAsMaster()}
     func startAsClient() {manager.startAsClient()}
     func disconnect() {manager.stop()}
-    func sendStartCommand() {manager.sendCommand(["action": "start", "sender": "master"])}
-    func sendStopCommand() {manager.sendCommand(["action": "stop", "sender": "master"])}
+    func sendStartCommand() {manager.sendCommand(["action": "start", "sender": "\(role)"])}
+    func sendStopCommand() {manager.sendCommand(["action": "stop", "sender": "\(role)"])}
     
 }

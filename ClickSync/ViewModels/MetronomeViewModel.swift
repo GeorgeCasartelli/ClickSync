@@ -6,7 +6,9 @@ extension MetronomeView {
     class ViewModel: ObservableObject {
         
         @Published var bpm: Double = 120 {
-            didSet{ engine.setTempo(bpm)}
+            didSet{
+                engine.setTempo(bpm)
+            }
         }
         
         @Published var currentSequencerPosition: Double = 0
@@ -151,6 +153,15 @@ extension MetronomeView {
             isPlaying = false
             engine.stopTransport()
         }
+        
+        func sendBPM(multipeer: MultipeerManager) {
+            guard multipeer.role == .master else { return }
+            multipeer.sendCommand(([
+                "action" : "bpm",
+                "sender" : "master",
+                "value"  :  bpm
+            ]))
+        }
 
         func changeSound( to name: String) {
             selectedSoundName = name
@@ -226,13 +237,19 @@ extension MetronomeView {
             case "start":
                 if let startTime = command["startTime"] as? Double {
                     scheduleStart(at: startTime)
-//                    start()
+                    //                    start()
                     showStatus = true;
                     cmdReceivedTime = Date().timeIntervalSince1970
                 }
             case "stop":
                 stop()
                 showStatus = false;
+            
+                
+            case "bpm":
+                guard role == .client else {return}
+                guard let value = command["value"] as? Double else { return }
+                
             default: break
             }
         }

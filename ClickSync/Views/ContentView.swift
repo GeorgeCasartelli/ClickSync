@@ -12,7 +12,6 @@ import Foundation
 import AVFoundation
 
 struct UnixTimeView: View {
-
     @State private var unixTime: TimeInterval = Date().timeIntervalSince1970
 
     // 60 Hz update feels “alive” but you can lower this if you want
@@ -52,13 +51,10 @@ struct ContentView: View {
                 VStack {
                     AppNavBar(showNetworkView: $showNetworkView).frame(height:40)
  
-                    UnixTimeView()
+//                    UnixTimeView()
                         .foregroundStyle(.white)
                     Spacer()
                     
-                    Text(String("Beat: \(Int(metroVM.currentSequencerPosition) + 1)"))
-                        .foregroundColor(.white)
-                        .padding()
                     ZStack {
                         MetronomeView()
                             .environmentObject(multipeerManager)

@@ -88,9 +88,11 @@ class MetronomeEngine {
     
 //MARK: Audio session config
     private func configureAudioSession() {
+        
         let session = AVAudioSession.sharedInstance()
         
         do {
+            
             try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
             // starting w low buffer, 256 frames *48k is 5.3ms
             try session.setPreferredIOBufferDuration(0.005);
@@ -101,6 +103,7 @@ class MetronomeEngine {
         }
     }
     
+    /// converting from seconds to hostTime and baack
     private func secondsToHostTime(_ seconds: Double) -> UInt64 {
         return AVAudioTime.hostTime(forSeconds: seconds)
     }
@@ -116,6 +119,7 @@ class MetronomeEngine {
     private func updateTickPeriod() {
         // quaver beats in seaconds
         tickPeriodSeconds = 60.0 / Double(tempo)
+        print("tick period updated to \(tickPeriodSeconds), bpm: \(tempo)")
     }
     
     
@@ -380,6 +384,7 @@ class MetronomeEngine {
     
     func setTempo(_ bpm: Double) {
 //        sequencer.setTempo(bpm)
+        print("Setting tempo to \(bpm)")
         tempo = bpm
         updateTickPeriod()
     }

@@ -12,11 +12,12 @@ struct MetronomeView: View {
     @EnvironmentObject var metroVM: ViewModel
     @EnvironmentObject private var multipeerManager:  MultipeerManager
 
-
+    @FocusState private var bpmFocused: Bool
+    
     let bottomValues = [1.0, 2.0, 4.0, 8.0]
     
     var body: some View {
-        NavigationStack {
+        
             ZStack {
                 Color(red: 0.06, green: 0.06, blue: 0.06)
                     .ignoresSafeArea()
@@ -51,8 +52,11 @@ struct MetronomeView: View {
                     
                     VStack(spacing: 6) {
                         
-                        BPMControl(bpm: $metroVM.bpm)
+                        BPMControl(bpm: $metroVM.bpm, bpmFieldFocused: $bpmFocused)
                             .padding()
+                            .onTapGesture {
+                                bpmFocused = true
+                            }
                         
                         
                         VStack(spacing: 12) {
@@ -88,11 +92,23 @@ struct MetronomeView: View {
                             Text("Now Playing @ \(metroVM.startTime)").foregroundStyle(.white)
                         }
                     }
+                    .frame(height: 300)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.clear)
+                    .overlay {
+                        if bpmFocused {
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    bpmFocused = false
+                                }
+                        }
+                    }
                     
                     
                 }
                 .padding()
-            }
-        }
+            
+        }.ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }

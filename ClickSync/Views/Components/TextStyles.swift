@@ -7,6 +7,18 @@
 
 import SwiftUI
 
+extension TextField {
+    func mainStyle() -> some View {
+        self
+            .font(.system(.title, design: .monospaced))
+//            .bold()
+            .foregroundStyle(.orange)
+            .fontWeight(.heavy)
+            
+            
+    }
+}
+
 extension Text {
     func mainStyle() -> some View {
         self
