@@ -10,8 +10,14 @@ import SwiftUI
 struct BPMControl: View {
     
     @Binding var bpm: Double
-    
+
+    var disabled: Bool
     var bpmFieldFocused: FocusState<Bool>.Binding
+    
+    var onDragStart: (() -> Void)? = nil
+    var onDragEnd: ((Double) -> Void)? = nil
+    var dragEnabled: Bool = true;
+    
     
     @State private var dragStartValue: Double = 0
     @State private var isDragging = false
@@ -40,22 +46,24 @@ struct BPMControl: View {
         }
     }
     
+    var onCommit: ((Double) -> Void)? = nil
     
     var body: some View {
         ZStack{
             VStack{
-                HStack {
+                VStack {
                     TextField("", text: $bpmText)
+                        .disabled(disabled)
                         .keyboardType(.numberPad)
                         .focused(bpmFieldFocused)
                         .multilineTextAlignment(.center)
-                        .font(.system(.title, design: .monospaced))
+                        .font(.system(size: 50, design: .monospaced))
                         .foregroundStyle(textColor)
                         .scaleEffect(isDragging ? 1.08 : 1.0)
                         .animation(.spring(response: 0.18, dampingFraction: 0.7), value: isDragging)
                         .fontWeight(.heavy)
                         .shadow(color: isDragging ? .orange.opacity(0.6) : .clear, radius: isDragging ? 8 : 0)
-                        .frame(width: 90)
+                        .frame(maxWidth: .infinity)
                         .toolbar {
                             ToolbarItemGroup(placement: .keyboard) {
                                 Spacer()
@@ -72,9 +80,14 @@ struct BPMControl: View {
                 .contentShape(Rectangle())
 
                 .gesture(
-                    DragGesture()
+                    
+                    disabled ? nil : DragGesture()
                         .onChanged { value in
-                            isDragging = true
+                            if !isDragging {
+                                onDragStart?()
+                                isDragging = true
+                            }
+                            
                             let deltaH = value.translation.width * dragSensitivity
                             let deltaV = -value.translation.height * dragSensitivity
                             var newBPM = dragStartValue + deltaH + deltaV
@@ -102,7 +115,9 @@ struct BPMControl: View {
                             dragStartValue = bpm
                             isDragging = false
                             dragDir = .none
+                            onDragEnd?(bpm)
                         }
+                    
                 )
                 .onAppear {
                     bpmText = "\(Int(bpm))"
@@ -120,6 +135,8 @@ struct BPMControl: View {
             .frame(width: 200, height: 60)
         }
         
+        .opacity(disabled ? 0.35 : 1.0)
+        
         
     }
     
@@ -133,6 +150,7 @@ struct BPMControl: View {
         
         let clamped = min(max(value, minBPM), maxBPM)
         bpm = round(clamped)
+        onCommit?(bpm)
         bpmText = "\(Int(bpm))"
         dragStartValue = bpm
     }

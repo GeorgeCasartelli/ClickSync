@@ -31,8 +31,9 @@ struct ContentView: View {
     @StateObject private var metroVM: MetronomeView.ViewModel
     @StateObject private var networkVM: NetworkViewModel
     
-    @State private var showNetworkView = false
+    @State private var showSettingsView = false
     @State private var showSoundPickerView = false;
+    @State private var showCueButtons = true;
     
     init() {
         let mpManager = MultipeerManager()
@@ -49,29 +50,30 @@ struct ContentView: View {
                     .ignoresSafeArea()
                 
                 VStack {
-                    AppNavBar(showNetworkView: $showNetworkView).frame(height:40)
+                    AppNavBar(showNetworkView: $showSettingsView
+                    ).frame(height:40)
  
 //                    UnixTimeView()
                         .foregroundStyle(.white)
                     Spacer()
                     
                     ZStack {
-                        MetronomeView()
+                        MetronomeView(showCueButtons: $showCueButtons)
                             .environmentObject(multipeerManager)
                             .environmentObject(metroVM)
                         
-                        if showNetworkView {
+                        if showSettingsView {
                             Color.black.opacity(0.4)
                                 .ignoresSafeArea()
                                 .blur(radius: 2)
                                 .onTapGesture {
-                                    withAnimation { showNetworkView = false}
+                                    withAnimation { showSettingsView = false}
                                 }
                             
-                            SettingsView(showSoundPickerView: $showSoundPickerView)
+                            SettingsView(showSoundPickerView: $showSoundPickerView, showCueButtons: $showCueButtons, disableShowCueButtons: multipeerManager.role == .client)
                                 .environmentObject(networkVM)
                                 .environmentObject(metroVM)
-
+                                .environmentObject(multipeerManager)
                                 .frame(width: 350, height: 400)
                                 .background(.ultraThinMaterial)
                                 .cornerRadius(20)
@@ -90,7 +92,7 @@ struct ContentView: View {
                             
                             SoundPickerView(
                                 availableSounds: metroVM.availableSoundNames, selectedSound: metroVM.selectedSoundName) { newSound in
-                                    metroVM.changeSound(to: newSound)
+                                    metroVM.changeSound(newSound)
                                 }
                                 .frame(width: 340, height: 500)
                                 .background(.ultraThinMaterial)
@@ -100,7 +102,7 @@ struct ContentView: View {
                                 .zIndex(2)
                             
                         }
-                    }.animation(.easeInOut, value: showNetworkView)
+                    }.animation(.easeInOut, value: showSettingsView)
                     
                 }
                 

@@ -11,9 +11,14 @@ struct SettingsView: View {
     
     
     @Binding var showSoundPickerView: Bool
+    @Binding var showCueButtons: Bool
+    
+    var disableShowCueButtons: Bool
+
     
     @EnvironmentObject private var networkVM: NetworkViewModel
     @EnvironmentObject private var metro: MetronomeView.ViewModel
+    @EnvironmentObject private var multipeerManager: MultipeerManager
     @State private var selectedTab: SettingsTab = .network
     @State private var previousTab: SettingsTab = .network
     
@@ -47,7 +52,9 @@ struct SettingsView: View {
         ZStack {
             Color(.black).opacity(0.4)
             VStack(spacing: 20) {
+                
                 HStack(spacing: 8) {
+                    
                     ForEach(SettingsView.SettingsTab.allCases) { tab in
                         Button(action: {
                             
@@ -110,19 +117,38 @@ struct SettingsView: View {
                                     
                                     Spacer()
                                     
-
-                                    Button {
-                                        withAnimation{
-                                            showSoundPickerView = true
+                                    VStack(spacing: 8) {
+                                        Button {
+                                            withAnimation{
+                                                showSoundPickerView = true
+                                            }
+                                            
+                                        } label: {
+                                            Text("Select Sound").generalTextStyle()
                                         }
+                                        .padding()
+                                        .foregroundColor(.white)
+                                        .background(.orange)
+                                        .cornerRadius(10)
+                                        .frame(width: 180)
                                         
-                                    } label: {
-                                        Text("Select Sound").generalTextStyle()
+                                        
+                                        Button {
+                                            withAnimation{
+                                                showCueButtons.toggle()
+                                            }
+                                        } label: {
+                                            Text("Show Cue Buttons").generalTextStyle()
+                                        }
+                                        .disabled(disableShowCueButtons)
+                                        .padding()
+                                        .foregroundColor(disableShowCueButtons ? .gray : .white)
+                                        .background(showCueButtons ? .green.opacity(0.8) : .gray.opacity(0.4))
+                                        .cornerRadius(10)
+                                        .frame(width: 180)
                                     }
-                                    .padding()
-                                    .foregroundColor(.white)
-                                    .background(.orange)
-                                    .cornerRadius(10)
+                                    .frame(width: 200)
+                                    
                                 }
                             }
                             .frame(maxWidth:.infinity,maxHeight: .infinity)
@@ -153,6 +179,13 @@ struct SettingsView: View {
                 .padding()
                 
         }
+        .onChange(of: disableShowCueButtons) { disabled in
+            if disabled {
+                withAnimation { showCueButtons = false }
+            }
+        }
+        
         
     }
+        
 }

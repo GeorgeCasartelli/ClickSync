@@ -1,7 +1,25 @@
 import SwiftUI
 import Combine
 
+struct TempoCue: Identifiable, Equatable, Codable{
+    let id: UUID
+    var label: String
+    var bpm: Double
+    
+    init(label: String, bpm: Double, id: UUID = UUID()) {
+        self.id = id
+        self.label = label
+        self.bpm = bpm
+    }
+    
+    func getID() -> UUID {
+        return id
+    }
+}
+
 extension MetronomeView {
+
+    
     
     class ViewModel: ObservableObject {
         
@@ -10,6 +28,19 @@ extension MetronomeView {
                 engine.setTempo(bpm)
             }
         }
+        
+        // tempo cues
+        @Published var tempoCues: [TempoCue] = [
+            TempoCue(label: "Slow", bpm: 90),
+            TempoCue(label: "Mid", bpm: 110),
+            TempoCue(label: "Base", bpm: 120),
+            TempoCue(label: "Fast", bpm: 180)
+        ]
+        
+        @Published var queuedCueID: UUID? = nil
+        
+        @Published var pendingBpm: Double? = nil
+        @Published var queueBpmEnabled: Bool = true
         
         @Published var currentSequencerPosition: Double = 0
         
@@ -41,8 +72,7 @@ extension MetronomeView {
         
         var playIcon: String { isPlaying ? "⏸︎" : "▶︎"  }
         var playButtonColor: Color {isPlaying ? Color.orange : Color.teal.opacity(0.4)}
-        var pulseSize: CGFloat { isPlaying ? 1.05 : 1.0 }
-        var networkCommand: [String: String] { isPlaying ? ["action": "start", "sender": "master"] : ["action": "stop", "sender": "master"]}
+        var pulseSize: CGFloat { isPlaying ? 1.5 : 1.0 }
         
         private let engine = MetronomeEngine()
         
@@ -55,12 +85,68 @@ extension MetronomeView {
             
             engine.loadSoundPairs(named: selectedSoundName)
             
+            loadTempoCues()
+            
+            $tempoCues
+                .dropFirst()
+                .sink  { [ weak self] _ in
+                    self?.saveTempoCues()
+                }
+                .store(in: &cancellables)
             
             engine.onBeatChange = { [weak self] beat in
-                self?.currentBeat = beat
+                guard let self else { return }
+                self.currentBeat = beat
+                
+                if beat == Int(timeSigTop)-1, let queued = self.pendingBpm {
+                    self.applyTempo(queued)
+                }
+            }
+            
+            
+        }
+        
+        func triggerTempoCue(_ cue: TempoCue, multipeer: MultipeerManager?) {
+            requestTempoChange(cue.bpm)
+            queuedCueID = cue.id
+            
+            guard let multipeer else {return}
+            guard multipeer.role == .master else {return}
+            guard !multipeer.connectedPeers.isEmpty else { return }
+            
+            multipeer.sendCommand([
+                "action": "setBPM",
+                "sender": "master",
+                "bpm": cue.bpm
+            ])
+        }
+        
+        private let cuesKey = "tempoCues.v1"
+        
+        func loadTempoCues() {
+            guard let data = UserDefaults.standard.data(forKey: cuesKey) else { return }
+            do {
+                tempoCues = try JSONDecoder().decode([TempoCue].self, from: data )
+            } catch {
+                print("Failed to decode cues: \(error)")
             }
         }
         
+        func updateCue(_ updated: TempoCue) {
+            if let i = tempoCues.firstIndex(where: { $0.id == updated.id }) {
+                tempoCues[i] = updated
+            }
+        }
+        
+        func saveTempoCues() {
+            do {
+                let data = try JSONEncoder().encode(tempoCues)
+                UserDefaults.standard.set(data, forKey: cuesKey)
+                
+            } catch {
+                print("Failed to encode cues: \(error)")
+            }
+        }
         func togglePlay(multipeer: MultipeerManager) {
             if !isPlaying {
                 // calculate the next even second for syncro start
@@ -73,7 +159,12 @@ extension MetronomeView {
                 ]
                 print("MASTER: Sending CMD with startTime")
                 multipeer.sendCommand(command)
-                scheduleStart(at: nextEvenSecond) // wait to start syncro
+                if multipeer.role == .master {
+                    scheduleStart(at: nextEvenSecond) // wait to start syncro
+                }
+                else {
+                    start()
+                }
 //                start()
             } else {
                 isPlaying = false
@@ -82,8 +173,7 @@ extension MetronomeView {
             }
         }
         
-        
-        
+
         private func scheduleStart(at timestamp: Double) {
             let myRun = runID
             
@@ -92,7 +182,7 @@ extension MetronomeView {
             
             let warmupDelay = (timestamp - warmup) - now
             let delay = timestamp - now // calculate how long till target timestamp
- 
+            
             
             if warmupDelay > 0 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + warmupDelay) { [weak self] in
@@ -109,7 +199,6 @@ extension MetronomeView {
             }
             
             if delay > 0 {
-                
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [ weak self ] in
                     guard let self = self else { return }
                     guard self.runID == myRun else {return }
@@ -130,11 +219,9 @@ extension MetronomeView {
                 isPlaying = true
                 startTime = Date().timeIntervalSince1970
             }
-                // ensure delay is positive
-
+    
         }
-            
-            // schedule actual start
+        
 
         
         func start() {
@@ -154,16 +241,21 @@ extension MetronomeView {
             engine.stopTransport()
         }
         
-        func sendBPM(multipeer: MultipeerManager) {
-            guard multipeer.role == .master else { return }
-            multipeer.sendCommand(([
-                "action" : "bpm",
-                "sender" : "master",
-                "value"  :  bpm
-            ]))
+        func requestTempoChange(_ newBpm: Double) {
+            if isPlaying && queueBpmEnabled {
+                pendingBpm = newBpm
+            } else {
+                applyTempo(newBpm)
+            }
         }
-
-        func changeSound( to name: String) {
+        
+        private func applyTempo(_ bpm: Double) {
+            self.bpm = bpm
+            pendingBpm = nil
+            queuedCueID = nil
+        }
+        
+        func changeSound(_ name: String) {
             selectedSoundName = name
             engine.loadSoundPairs(named: name)
         }
@@ -246,12 +338,17 @@ extension MetronomeView {
                 showStatus = false;
             
                 
-            case "bpm":
-                guard role == .client else {return}
-                guard let value = command["value"] as? Double else { return }
+            case "setBPM":
+                if let tempo = command["bpm"] as? Double {
+                    print("Values is \(tempo)")
+                    requestTempoChange(tempo)
+                }
+                
                 
             default: break
             }
+            
+                
         }
     }
     
