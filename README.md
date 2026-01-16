@@ -18,6 +18,14 @@ Added reactive beat symbols which flash on each click, working well with the cur
 ###### 18/12/2025
 Began to look into MultipeerConnectivity. Managed to get communication between devices and basic commands sent from master to slave devices (only start/stop). Next will be to sync the start/stop cmd between devices, and then add more cross device interaction such as tempo. 
 
+###### 05/01/2026 
+Added a new settings window for the network things instead of a new page. Seemed a lot cleaner and nicer, making it feel like its still part of the app.
+
+###### 10/01/2026
+Managed to sync up the metronomes! AppleSequencer from audiokit had differing startUp Times, so even though "start" command triggered at a commoon time, devices did not start together! Attmped to use `preroll()` but that didn't make much difference so implemented custom sequencer logic, with a frame size and by generating clicks in a chunk of upcoming time. Worked much better, although sometimes will not be synced.
+
+###### 14/01/2026
+Networked BPM control added, with new "Tempo Queue" options, which allows users to queue a tempo change at the end of a bar, with 4 customisable buttons available for users to be able to put the bpm that they want. This then allows for synchronised tempo changes for devices across the network! 
 
 
 #### Cloning issues
