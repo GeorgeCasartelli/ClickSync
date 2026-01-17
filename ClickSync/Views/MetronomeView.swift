@@ -155,30 +155,25 @@ struct MetronomeView: View {
                                 let isQueued = (queuedID == cue.id)
                                 let isCurrent = (currentBpmInt == Int(cue.bpm))
 
-                                Button {
-                                    metroVM.triggerTempoCue(cue, multipeer: multipeerManager)
-                                } label: {
-                                    VStack(spacing: 4) {
-                                        Text("\(Int(cue.bpm))")
-                                            .secondaryStyle()
-
-                                        Text(cue.label)
-                                            .font(.caption)
-                                            .opacity(0.8)
-                                            .lineLimit(1)
-                                    }
-                                    .frame(maxWidth: 200, minHeight: 48)
+                                VStack(spacing: 4) {
+                                    Text("\(Int(cue.bpm))").secondaryStyle()
+                                    Text(cue.label).font(.caption).opacity(0.8).lineLimit(1)
                                 }
+                                .frame(maxWidth: 200, minHeight: 48)
                                 .padding()
                                 .foregroundColor(.white)
                                 .background(isQueued ? .green : (isCurrent ? .orange : .gray.opacity(0.4)))
                                 .cornerRadius(10)
                                 .frame(width: 100)
-                                .onLongPressGesture(minimumDuration: 0.35, maximumDistance: 12) {
-                                    withAnimation(.easeInOut(duration: 0.18)) {
-                                        editingCue = cue
-                                    }
+                                .contentShape(RoundedRectangle(cornerRadius: 10))
+                                .onTapGesture {
+                                    metroVM.triggerTempoCue(cue, multipeer: multipeerManager)
                                 }
+                                .onLongPressGesture(minimumDuration: 0.35, maximumDistance: 30) {
+                                    print("LONG PRESS \(cue.label)")
+                                    withAnimation(.easeInOut(duration: 0.18)) { editingCue = cue }
+                                }
+
                             }
                         }
                         .padding(.horizontal, 12)

@@ -7,13 +7,20 @@ struct TempoCueEditor: View {
 
     @State private var labelText = ""
     @State private var bpmText = ""
+    
+    @FocusState private var focusedField: Field?
+    
+    private enum Field {
+        case label, bpm
+    }
 
     var body: some View {
         if let cue = editingCue {
             ZStack {
                 Color.black.opacity(0.4)
                     .ignoresSafeArea()
-                    .onTapGesture { dismiss() }
+                    .onTapGesture { focusedField = nil
+                        dismiss() }
                 
                 
                 VStack(spacing: 16) {
@@ -29,6 +36,11 @@ struct TempoCueEditor: View {
                             .padding()
                             .background(Color.gray.opacity(0.2))
                             .cornerRadius(10)
+                            .focused($focusedField, equals: .label)
+                            .submitLabel(.done)
+                            .onSubmit {
+                                focusedField = .bpm
+                            }
 
                         TextField("BPM", text: $bpmText)
                             .keyboardType(.numberPad)
@@ -37,6 +49,8 @@ struct TempoCueEditor: View {
                             .padding()
                             .background(Color.gray.opacity(0.2))
                             .cornerRadius(10)
+                            .focused($focusedField, equals: .bpm)
+                        
                     }
 
                     HStack(spacing: 10) {
@@ -44,13 +58,15 @@ struct TempoCueEditor: View {
                             dismiss()
                         } label: {
                             Text("Cancel")
-                            .generalTextStyle()
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.gray.opacity(0.35))
-                            .cornerRadius(10)
+                                .generalTextStyle()
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.gray.opacity(0.35))
+                                .cornerRadius(10)
                         }
+                        
                         Button {
+                            focusedField = nil
                             save(from: cue)
                         } label: {
                             Text("Save")
@@ -64,7 +80,7 @@ struct TempoCueEditor: View {
                     }
                 }
                 .padding()
-                .frame(width: 280)          // 👈 compact
+                .frame(width: 280)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
                         .fill(.gray)
@@ -76,6 +92,14 @@ struct TempoCueEditor: View {
                 )
                 .cornerRadius(20)
                 .shadow(radius: 10)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            focusedField = nil   // dismiss keyboard
+                        }
+                    }
+                }
                 .onAppear {
                     labelText = cue.label
                     bpmText = "\(Int(cue.bpm))"
