@@ -11,100 +11,29 @@ import SoundpipeAudioKit
 import Foundation
 import AVFoundation
 
+struct UnixTimeView: View {
+    @State private var unixTime: TimeInterval = Date().timeIntervalSince1970
 
-extension Text {
-    func mainStyle() -> some View {
-        self
-            .font(.system(.title, design: .monospaced))
-//            .bold()
-            .foregroundStyle(.orange)
-            .fontWeight(.heavy)
-            
-            
-    }
-    
-    func generalTextStyle() -> some View {
-        self
-            .font(.system(.body, design: .monospaced))
-            
-    }
-    
-    func embossedLabelStyle() -> some View {
-            self
-                .font(.system(.body, design: .monospaced))
-                .fontWeight(.heavy)
-                .foregroundColor(Color.white.opacity(0.7))
-                .shadow(color: .black.opacity(0.8), radius: 1, x: 1, y: 1)   // inner shadow (recessed)
-                .shadow(color: .white.opacity(0.15), radius: 1, x: -1, y: -1) // highlight on top-left
-                .padding(.vertical, 2)
-                .padding(.horizontal, 4)
-        }
-    
-    func secondaryStyle() -> some View {
-        self
-            .font(.system(size: 30, design: .monospaced ))
-            .fontWeight(.medium)
-    }
-}
+    // 60 Hz update feels “alive” but you can lower this if you want
+    private let timer = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common).autoconnect()
 
-struct VolumeBar: View {
-    let label: String
-    @Binding var value: Float
-    let color: Color
-    
-    let minVol: Float = 0
-    let maxVol: Float = 8.0
-    let barHeight: Float = 120
-    
-    @State private var dragStartValue: Float = 1.0
-  
     var body: some View {
-        VStack {
-            Text(label)
-                .foregroundColor(.white.opacity(0.7))
-
-            RoundedRectangle(cornerRadius: 8)
-                .fill(color.opacity(0.2))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(color)
-                        .frame(height: CGFloat(value / maxVol) * 120),
-                    alignment: .bottom
-                )
-                .frame(width: 36, height: 120)
-                .gesture(
-                    DragGesture()
-                        .onChanged { drag in
-                            
-                            let dragAmount = -Float(drag.translation.height) + Float(dragStartValue)
-                             
-                            let clamped = min(max(dragAmount, 0.0), barHeight)
-                            let mapped = clamped / barHeight * maxVol
-                            value = Float(mapped)
-
-                        }
-                        .onEnded { _ in
-                            // nothing to persist; next drag will capture new start
-                            dragStartValue = value / maxVol * barHeight
-
-                            
-                        }
-
-                                    
-                )
-        }
-        
+        Text(String(format: "%.3f", unixTime))
+            .font(.system(size: 24, weight: .medium, design: .monospaced))
+            .onReceive(timer) { _ in
+                unixTime = Date().timeIntervalSince1970
+            }
     }
 }
-
-
 
 struct ContentView: View {
     @StateObject private var multipeerManager: MultipeerManager
     @StateObject private var metroVM: MetronomeView.ViewModel
     @StateObject private var networkVM: NetworkViewModel
     
-    @State private var showNetworkView = false
+    @State private var showSettingsView = false
+    @State private var showSoundPickerView = false;
+    @State private var showCueButtons = true;
     
     init() {
         let mpManager = MultipeerManager()
@@ -121,25 +50,30 @@ struct ContentView: View {
                     .ignoresSafeArea()
                 
                 VStack {
-                    AppNavBar(showNetworkView: $showNetworkView).frame(height:40)
+                    AppNavBar(showNetworkView: $showSettingsView
+                    ).frame(height:40)
  
+//                    UnixTimeView()
+                        .foregroundStyle(.white)
+                    Spacer()
                     
                     ZStack {
-                        MetronomeView()
+                        MetronomeView(showCueButtons: $showCueButtons)
                             .environmentObject(multipeerManager)
                             .environmentObject(metroVM)
                         
-                        if showNetworkView {
+                        if showSettingsView {
                             Color.black.opacity(0.4)
                                 .ignoresSafeArea()
                                 .blur(radius: 2)
                                 .onTapGesture {
-                                    withAnimation { showNetworkView = false}
+                                    withAnimation { showSettingsView = false}
                                 }
                             
-                            SettingsView()
+                            SettingsView(showSoundPickerView: $showSoundPickerView, showCueButtons: $showCueButtons, disableShowCueButtons: multipeerManager.role == .client)
                                 .environmentObject(networkVM)
                                 .environmentObject(metroVM)
+                                .environmentObject(multipeerManager)
                                 .frame(width: 350, height: 400)
                                 .background(.ultraThinMaterial)
                                 .cornerRadius(20)
@@ -147,13 +81,37 @@ struct ContentView: View {
                                 .transition(.scale.combined(with: .opacity))
                                 .zIndex(1)
                         }
-                    }.animation(.easeInOut, value: showNetworkView)
+                        
+                        if showSoundPickerView {
+                            Color.black.opacity(0.4)
+                                .ignoresSafeArea()
+                                .blur(radius: 2)
+                                .onTapGesture {
+                                    withAnimation { showSoundPickerView = false}
+                                }
+                            
+                            SoundPickerView(
+                                availableSounds: metroVM.availableSoundNames, selectedSound: metroVM.selectedSoundName) { newSound in
+                                    metroVM.changeSound(newSound)
+                                }
+                                .frame(width: 340, height: 500)
+                                .background(.ultraThinMaterial)
+                                .cornerRadius(20)
+                                .shadow(radius: 10)
+                                .transition(.scale.combined(with: .opacity))
+                                .zIndex(2)
+                            
+                        }
+                    }.animation(.easeInOut, value: showSettingsView)
                     
                 }
                 
             }
             
             
+        }
+        .onAppear {
+            metroVM.bind(multipeer: multipeerManager)
         }
     }
 }

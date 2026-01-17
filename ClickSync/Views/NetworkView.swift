@@ -8,7 +8,8 @@
 import SwiftUI
 
 struct NetworkView: View {
-    @EnvironmentObject var viewModel: NetworkViewModel
+    @EnvironmentObject var networkVM: NetworkViewModel
+    
     
     var body: some View {
         ZStack {
@@ -18,31 +19,31 @@ struct NetworkView: View {
             
             VStack{
                 
-                if viewModel.role == .none {
+                if networkVM.role == .none {
                     VStack(spacing: 20) {
                         Text("Choose role: ")
                             .generalTextStyle()
                             .foregroundStyle(.white)
                         
                         Button("Start as Master") {
-                            viewModel.startAsMaster()
+                            networkVM.startAsMaster()
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.purple)
                         
                         Button("Join as Client") {
-                            viewModel.startAsClient()
+                            networkVM.startAsClient()
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.blue)
                     }
                 } else {
-                    Text("Role: \(viewModel.role == .master ? "Master" : "Client")")
+                    Text("Role: \(networkVM.role == .master ? "Master" : "Client")")
                         .font(.headline)
-                        .foregroundColor(viewModel.role == .master ? .purple : .blue)
+                        .foregroundColor(networkVM.role == .master ? .purple : .blue)
                     
                     Button("Disconnect") {
-                        viewModel.disconnect()
+                        networkVM.disconnect()
                     }
                     .buttonStyle(.bordered)
                     .tint(.red)
@@ -52,11 +53,11 @@ struct NetworkView: View {
                 
                 Text("Connected Devices:").generalTextStyle()
                     .font(.headline)
-                if viewModel.peers.isEmpty {
+                if networkVM.peers.isEmpty {
                     Text("No devices connected").generalTextStyle()
                         .foregroundColor(.gray)
                 } else {
-                    ForEach(viewModel.peers, id: \.self) { peer in
+                    ForEach(networkVM.peers, id: \.self) { peer in
                         Text(peer)
                             .foregroundColor(.green)
                     }

@@ -16,13 +16,9 @@ struct AppNavBar: View {
             
             VStack(spacing: 0) {
                 HStack {
-                    Button(action: {}) {
-                        Image(systemName: "chevron.left")
-                            .foregroundColor(.orange)
-                            .font(.title2)
-                    }
+                   
                     Spacer()
-                    Text("Metronome")
+                    Text("ClickSync")
                         .mainStyle()
                     Spacer()
                     Button(action: {showNetworkView = true}) {

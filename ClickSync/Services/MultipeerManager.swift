@@ -27,6 +27,7 @@ class MultipeerManager: NSObject, ObservableObject {
     @Published var connectedPeers: [String] = []
     @Published var role: DeviceRole = .none
     @Published var lastAction: String?
+    @Published var lastCommand: [String: Any]?
     
     private let myPeerID: MCPeerID // nametag
     private var session: MCSession! // conversation channel where devices talk - opens the phone line
@@ -111,6 +112,7 @@ extension MultipeerManager: MCSessionDelegate {
     }
     
     // didReceive data gets called when someone sends info
+    // MARK: Receive
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
         // this is message receiving
         
@@ -138,7 +140,8 @@ extension MultipeerManager: MCSessionDelegate {
             
             if sender == "master" {
                 DispatchQueue.main.async {
-                    self.lastAction = action
+                    self.lastCommand = command
+                    print("Settings last command to : \(command)")
                 }
             }
             
