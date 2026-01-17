@@ -303,20 +303,19 @@ class MetronomeEngine {
         let lookaheadHost = nowHost &+ secondsToHostTime(tickLookahead)
 
         while nextTickHostTime <= lookaheadHost {
-            // Decide hi/lo based on accents
+            // check accents and call hi/lo
             let beat = beatIndex % timeSigTop
             let isAccented = accentedBeats.contains(beat)
 
-            // Schedule sampler note exactly at hostTime
+            // schedule sampler to play at hosttime
             scheduleSamplerTick(accented: isAccented, hostTime: nextTickHostTime)
 
-            // Update beat state for UI (not audio-critical)
+            // update beat so ui can follow
             let uiBeat = beat
             DispatchQueue.main.async { [weak self] in
                 self?.onBeatChange?(uiBeat)
             }
 
-            // Advance
             beatIndex += 1
             let periodHost = secondsToHostTime(tickPeriodSeconds)
             nextTickHostTime &+= periodHost
@@ -326,7 +325,6 @@ class MetronomeEngine {
     private func scheduleSamplerTick(accented: Bool, hostTime: UInt64) {
         let runID = transportRunID
         
-//        let nodeTime = AVAudioTime(hostTime: hostTime)
         DispatchQueue.global(qos: .userInteractive).async { [weak self] in
             guard let self else { return }
             

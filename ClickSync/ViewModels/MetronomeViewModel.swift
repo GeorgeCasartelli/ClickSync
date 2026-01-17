@@ -72,11 +72,16 @@ extension MetronomeView {
         
         var playIcon: String { isPlaying ? "⏸︎" : "▶︎"  }
         var playButtonColor: Color {isPlaying ? Color.orange : Color.teal.opacity(0.4)}
-        var pulseSize: CGFloat { isPlaying ? 1.5 : 1.0 }
+        var pulseSize: CGFloat { isPlaying ? 1.2 : 1.0 }
         
         private let engine = MetronomeEngine()
         
         private var runID = UUID() // runtime ID
+        
+        enum TempoChangeMode {
+            case immediate
+            case queued
+        }
         
         init() {
             availableSoundNames = Array(engine.soundPairs.keys).sorted()
@@ -107,7 +112,7 @@ extension MetronomeView {
         }
         
         func triggerTempoCue(_ cue: TempoCue, multipeer: MultipeerManager?) {
-            requestTempoChange(cue.bpm)
+            requestTempoChange(cue.bpm, mode: .queued            )
             queuedCueID = cue.id
             
             guard let multipeer else {return}
@@ -115,9 +120,9 @@ extension MetronomeView {
             guard !multipeer.connectedPeers.isEmpty else { return }
             
             multipeer.sendCommand([
-                "action": "setBPM",
+                "action": "cueBPM",
                 "sender": "master",
-                "bpm": cue.bpm
+                "bpm": cue.bpm,
             ])
         }
         
@@ -147,6 +152,7 @@ extension MetronomeView {
                 print("Failed to encode cues: \(error)")
             }
         }
+        
         func togglePlay(multipeer: MultipeerManager) {
             if !isPlaying {
                 // calculate the next even second for syncro start
@@ -169,7 +175,10 @@ extension MetronomeView {
             } else {
                 isPlaying = false
                 engine.stopTransport()
-                multipeer.sendCommand(["action":"stop", "sender":"master"])
+                multipeer.sendCommand([
+                    "action":"stop",
+                    "sender":"master"
+                ])
             }
         }
         
@@ -241,11 +250,16 @@ extension MetronomeView {
             engine.stopTransport()
         }
         
-        func requestTempoChange(_ newBpm: Double) {
-            if isPlaying && queueBpmEnabled {
-                pendingBpm = newBpm
-            } else {
+        func requestTempoChange(_ newBpm: Double, mode: TempoChangeMode = .immediate) {
+            switch mode {
+            case .immediate:
                 applyTempo(newBpm)
+            case .queued:
+                if isPlaying && queueBpmEnabled {
+                    pendingBpm = newBpm
+                } else {
+                    applyTempo(newBpm)
+                }
             }
         }
         
@@ -275,6 +289,7 @@ extension MetronomeView {
             hiVolume = 1.0
             loVolume = 1.0
         }
+        
         func updateTimeSignature(top: Double? = nil, bottom: Double? = nil) {
          
             if let top = top { timeSigTop = top }
@@ -341,7 +356,13 @@ extension MetronomeView {
             case "setBPM":
                 if let tempo = command["bpm"] as? Double {
                     print("Values is \(tempo)")
-                    requestTempoChange(tempo)
+                    requestTempoChange(tempo, mode: .immediate)
+                }
+                
+            case "cueBPM":
+                if let tempo = command["bpm"] as? Double {
+                    print("Values is\(tempo)")
+                    requestTempoChange(tempo, mode: .queued)
                 }
                 
                 

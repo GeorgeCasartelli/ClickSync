@@ -8,6 +8,12 @@
 import SwiftUI
 
 struct AccentPickerView: View {
+    
+    
+    @Environment(\.horizontalSizeClass) private var hSize
+    private var isPhone:Bool {hSize == .compact}
+    
+    
     let beatCount: Int
     let accentedBeats: Set<Int>
     let currentBeat: Int
@@ -25,10 +31,11 @@ struct AccentPickerView: View {
     }
     
     var body: some View {
-        let circleSize: CGFloat = beatCount <= 8 ? 18 : (beatCount <= 10 ? 16 : 14)
+        let circleSize: CGFloat = beatCount <= 8 ? (isPhone ? 18 : 24) : (beatCount <= 10 ? (isPhone ? 16 : 24) : (isPhone ? 14 : 24))
         let spacing: CGFloat = beatCount <= 4 ? 16 : (beatCount <= 8 ? 12 : 8)
         
-        HStack(spacing: spacing) {
+    
+        let row = HStack(spacing: spacing) {
             ForEach(0..<beatCount, id: \.self) { beat in
                 BeatCircle(
                     isCurrent: beat == currentBeat,
@@ -46,14 +53,32 @@ struct AccentPickerView: View {
                     Rectangle()
                         .fill(Color.orange.opacity(0.3))
                         .frame(width: 2, height: 20)
-                        .padding(.trailing, 4)
+
                 }
             }
             
         }
-        .frame(maxWidth: .infinity)
-        .padding()
+        .padding(.horizontal, 12)
         .frame(height:50)
+        
+        
+        withAnimation(.easeInOut(duration: 0.5)) {
+            Group {
+                if isPhone && beatCount >= 13 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        row
+                    }.background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(.teal.opacity(0.2))
+                    )
+                } else {
+                    row
+                        .frame(maxWidth: .infinity)
+                }
+            }
+        }
+        
+        
 
     }
 }
