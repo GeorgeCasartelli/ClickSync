@@ -68,6 +68,7 @@ struct BPMControl: View {
                             ToolbarItemGroup(placement: .keyboard) {
                                 Spacer()
                                 Button("Done") {
+                                    bpmFieldFocused.wrappedValue = false
                                     commitTypedBPM()
                                 }
                             }

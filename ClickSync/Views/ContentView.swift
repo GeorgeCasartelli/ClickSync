@@ -11,22 +11,13 @@ import SoundpipeAudioKit
 import Foundation
 import AVFoundation
 
-struct UnixTimeView: View {
-    @State private var unixTime: TimeInterval = Date().timeIntervalSince1970
 
-    // 60 Hz update feels “alive” but you can lower this if you want
-    private let timer = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common).autoconnect()
-
-    var body: some View {
-        Text(String(format: "%.3f", unixTime))
-            .font(.system(size: 24, weight: .medium, design: .monospaced))
-            .onReceive(timer) { _ in
-                unixTime = Date().timeIntervalSince1970
-            }
-    }
-}
 
 struct ContentView: View {
+    
+    @Environment(\.horizontalSizeClass) private var hSize
+    private var isPhone:Bool {hSize == .compact}
+    
     @StateObject private var multipeerManager: MultipeerManager
     @StateObject private var metroVM: MetronomeView.ViewModel
     @StateObject private var networkVM: NetworkViewModel
@@ -44,23 +35,27 @@ struct ContentView: View {
     
     var body: some View {
         //        NavigationStack {
-        NavigationStack {
-            ZStack{
-                Color(red: 0.06, green: 0.06, blue: 0.06)
-                    .ignoresSafeArea()
-                
-                VStack {
+        
+        ZStack{
+            Color(red: 0.06, green: 0.06, blue: 0.06)
+                .ignoresSafeArea()
+            GeometryReader { geo in
+                VStack(spacing: 0) {
+                    
                     AppNavBar(showNetworkView: $showSettingsView
-                    ).frame(height:40)
- 
-//                    UnixTimeView()
-                        .foregroundStyle(.white)
-                    Spacer()
+                    )
+                    .environmentObject(multipeerManager)
+                    .frame(height: isPhone ? 40 : 60)
+                    //                            .padding(.top, geo.safeAreaInsets.top)
+                    //                        //                    UnixTimeView()
+                    //                            .foregroundStyle(.white)
+                    
                     
                     ZStack {
                         MetronomeView(showCueButtons: $showCueButtons)
                             .environmentObject(multipeerManager)
                             .environmentObject(metroVM)
+                            .frame(maxWidth: .infinity)
                         
                         if showSettingsView {
                             Color.black.opacity(0.4)
@@ -105,8 +100,10 @@ struct ContentView: View {
                     }.animation(.easeInOut, value: showSettingsView)
                     
                 }
-                
-            }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(red: 0.06, green: 0.06, blue: 0.06).ignoresSafeArea())                }
+            
+            
             
             
         }

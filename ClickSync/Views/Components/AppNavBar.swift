@@ -8,19 +8,40 @@ import SwiftUI
 
 struct AppNavBar: View {
     @Binding var showNetworkView: Bool
+    @Environment(\.horizontalSizeClass) private var hSize
+    private var isPhone:Bool {hSize == .compact}
+    @EnvironmentObject private var multipeerManager: MultipeerManager
     
     var body: some View{
         ZStack(alignment: .top) {
-            Color(red: 0.06, green: 0.06, blue: 0.06)
-                .ignoresSafeArea()
+            //            Color(red: 0.06, green: 0.06, blue: 0.06)
+            //                .ignoresSafeArea()
+            //
             
             VStack(spacing: 0) {
+                Spacer()
                 HStack {
-                   
+                    Button(action: {showNetworkView = true}) {
+                        Image(systemName: "wifi")
+                            .foregroundColor(.orange)
+                            .font(.title2)
+                    }
+                    
                     Spacer()
-                    Text("ClickSync")
-                        .mainStyle()
+                    
+                    ZStack {
+                        
+                        
+                        Text("ClickSync")
+                            .mainStyle()
+                            .shadow(color: .orange.opacity(0.1), radius: 5)
+
+                    }
+                    .frame(width: 200)
+                    
+                    
                     Spacer()
+                    
                     Button(action: {showNetworkView = true}) {
                         Image(systemName: "gear")
                             .foregroundColor(.orange)
@@ -30,14 +51,19 @@ struct AppNavBar: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 10)
-                .background(
-                    Color.black.opacity(0.7)
-                        .blur(radius: 10)
-                )
+                .padding(.bottom, 8)
+
+                Rectangle()
+                    .fill(.white.opacity(0.1))
+                    .frame(height: 2)
+                    
+                    
                 
-                Spacer() // rest of content
             }
+            .frame(maxWidth: .infinity)
+            .background(Color.teal.opacity(0.4), ignoresSafeAreaEdges: .top)
+//            .ignoresSafeArea(edges: .top)
+            
         }
-        
     }
 }

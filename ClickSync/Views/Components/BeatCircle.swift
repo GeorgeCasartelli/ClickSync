@@ -22,9 +22,13 @@ struct BeatCircle: View {
         let fadeDuration = max(beatDuration * 1.0, 0.5)
         let settleDuration = max(beatDuration * 1.0, 0.5)
         Circle()
+        
             .fill(
                 isAccented ? Color.orange : // accented ones
                 Color.gray.opacity(0.3) // default
+            )
+            .overlay(
+                Circle().stroke(.white.opacity(isAccented ? 0.0 : 0.3), style: StrokeStyle(lineWidth: 1, dash:[3,3]))
             )
             .frame(width: size, height: size)
             .overlay(

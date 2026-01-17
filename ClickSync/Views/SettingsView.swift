@@ -146,18 +146,29 @@ struct SettingsView: View {
                                         .background(showCueButtons ? .green.opacity(0.8) : .gray.opacity(0.4))
                                         .cornerRadius(10)
                                         .frame(width: 180)
+                                        
+                                        Button(action: metro.tapTempo) {
+                                            Text("Tap Tempo")
+                                                .generalTextStyle()
+                                                .padding()
+                                                .foregroundColor(.white)
+                                                .background(.orange)
+                                                .cornerRadius(10)
+                                        }
                                     }
-                                    .frame(width: 200)
+                                    .frame(width: 180)
                                     
                                 }
                             }
-                            .frame(maxWidth:.infinity,maxHeight: .infinity)
                             .padding()
-                            .transition(.opacity)
+                            
                         }
                         //                    .frame(maxWidth:        .infinity,maxHeight: .infinity)
+                        
+                        .frame(maxWidth:.infinity,maxHeight: .infinity)
                         .cornerRadius(20)
                         .padding()
+                        .transition(.opacity)
                     case .info:
                         ZStack {
                             Color(.orange).opacity(0.3)
