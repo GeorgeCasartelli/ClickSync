@@ -1,5 +1,5 @@
 //
-//  NetwokView.swift
+//  NetworkView.swift
 //  ClickSync
 //
 //  Created by George Casartelli on 18/12/2025.

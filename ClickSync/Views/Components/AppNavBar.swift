@@ -6,32 +6,30 @@
 //
 import SwiftUI
 
+// top nav bar used at the top of the app. reactive network button to show connectivity status
 struct AppNavBar: View {
-    @Binding var showNetworkView: Bool
-    @Environment(\.horizontalSizeClass) private var hSize
-    private var isPhone:Bool {hSize == .compact}
+    @Binding var showSettingsView: Bool
+
     @EnvironmentObject private var multipeerManager: MultipeerManager
     
     var body: some View{
         ZStack(alignment: .top) {
-            //            Color(red: 0.06, green: 0.06, blue: 0.06)
-            //                .ignoresSafeArea()
-            //
             
             VStack(spacing: 0) {
                 Spacer()
                 HStack {
-                    Button(action: {showNetworkView = true}) {
+                    // colour wifi symbol depending on connectivity status
+                    let isConnected = !multipeerManager.connectedPeers.isEmpty
+                    Button(action: {showSettingsView = true}) {
                         Image(systemName: "wifi")
-                            .foregroundColor(.orange)
+                            .foregroundColor(!isConnected ? .orange : multipeerManager.role == .master ? .purple : (multipeerManager.role == .client ? .green : .orange))
                             .font(.title2)
                     }
                     
                     Spacer()
                     
                     ZStack {
-                        
-                        
+                              
                         Text("ClickSync")
                             .mainStyle()
                             .shadow(color: .orange.opacity(0.1), radius: 5)
@@ -42,7 +40,7 @@ struct AppNavBar: View {
                     
                     Spacer()
                     
-                    Button(action: {showNetworkView = true}) {
+                    Button(action: {showSettingsView = true}) {
                         Image(systemName: "gear")
                             .foregroundColor(.orange)
                             .font(.title2)
@@ -53,16 +51,14 @@ struct AppNavBar: View {
                 .padding(.top, 10)
                 .padding(.bottom, 8)
 
+                // soft underline
                 Rectangle()
                     .fill(.white.opacity(0.1))
                     .frame(height: 2)
-                    
-                    
                 
             }
             .frame(maxWidth: .infinity)
             .background(Color.teal.opacity(0.4), ignoresSafeAreaEdges: .top)
-//            .ignoresSafeArea(edges: .top)
             
         }
     }

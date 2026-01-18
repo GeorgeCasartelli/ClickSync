@@ -8,16 +8,17 @@
 import SwiftUI
 
 
+/// Simple custom vertical drag control for volume. UI-only, value is bound to viewmodel state
 struct VolumeBar: View {
     let label: String
     @Binding var value: Float
     let color: Color
     
     let minVol: Float = 0
-    let maxVol: Float = 8.0
-    let barHeight: Float = 120
+    let maxVol: Float = 8.0 // scaling
+    let barHeight: CGFloat = 120
     
-    @State private var dragStartValue: Float = 1.0
+    @State private var dragStartVolume: Float = 0
   
     var body: some View {
         VStack {
@@ -37,22 +38,24 @@ struct VolumeBar: View {
                     DragGesture()
                         .onChanged { drag in
                             
-                            let dragAmount = -Float(drag.translation.height) + Float(dragStartValue)
-                             
-                            let clamped = min(max(dragAmount, 0.0), barHeight)
-                            let mapped = clamped / barHeight * maxVol
-                            value = Float(mapped)
+                            // map drag (pixels) into volume delta
+                           let delta = Float(-drag.translation.height) / Float(barHeight) * maxVol
+                           let newValue = dragStartVolume + delta
+                           value = min(max(newValue, minVol), maxVol)
 
                         }
                         .onEnded { _ in
                             // nothing to persist; next drag will capture new start
-                            dragStartValue = value / maxVol * barHeight
+                            dragStartVolume = value
 
                             
                         }
 
                                     
                 )
+                .onAppear {
+                    dragStartVolume = value
+                }
         }
         
     }

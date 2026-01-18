@@ -13,21 +13,18 @@
 //
 
 import MultipeerConnectivity
-import SwiftUI
+//import SwiftUI
+import Combine
+import Foundation
 
-enum DeviceRole {
-    case master
-    case client
-    case none
-}
 
 
 class MultipeerManager: NSObject, ObservableObject {
 
     @Published var connectedPeers: [String] = []
     @Published var role: DeviceRole = .none
-    @Published var lastAction: String?
-    @Published var lastCommand: [String: Any]?
+
+    @Published var lastCommand: NetworkCommand?
     
     private let myPeerID: MCPeerID // nametag
     private var session: MCSession! // conversation channel where devices talk - opens the phone line
@@ -78,21 +75,13 @@ class MultipeerManager: NSObject, ObservableObject {
         connectedPeers = []
     }
     
-    func send(word: String) {
-        guard !session.connectedPeers.isEmpty else {
-            print("No one is connected!")
-            return
-        }
-        
-        if let data = word.data(using: .utf8) { // convert to utf8 and send
-            try? session.send(data, toPeers: session.connectedPeers, with: .reliable)
-            print("Sent word: \(word)")
-        }
-    }
     
-    func sendCommand(_ cmd: [String: Any]) {
+    func sendCommand(_ cmd: NetworkCommand) {
+        print("In send command")
+        guard !session.connectedPeers.isEmpty else { return }
+        print("At do catch")
         do {
-            let data = try JSONSerialization.data(withJSONObject: cmd, options: [])
+            let data = try JSONEncoder().encode(cmd)
             try session.send(data, toPeers: session.connectedPeers, with: .reliable)
             print("Sent command: \(cmd)")
         } catch {
@@ -117,39 +106,18 @@ extension MultipeerManager: MCSessionDelegate {
         // this is message receiving
         
         // here we convert data back to a string and update received word
+        
         do {
-            let json = try JSONSerialization.jsonObject(with: data, options: [])
-            guard let command = json as? [String: Any] else {
-                print("Received JSON but not a dictionary")
-                return
+            let command = try JSONDecoder().decode(NetworkCommand.self, from: data)
+            DispatchQueue.main.async {
+                self.lastCommand = command
             }
-            
-            print("Received command: \(command)")
-            
-            guard let action = command["action"] as? String else {
-                print("Command has no action")
-                return
-            }
-            guard let sender = command["sender"] as? String else {
-                print("Command has no sender")
-                return
-            }
-            
-            print("Action is \(action)")
-            print("Sender is \(sender)")
-            
-            if sender == "master" {
-                DispatchQueue.main.async {
-                    self.lastCommand = command
-                    print("Settings last command to : \(command)")
-                }
-            }
-            
-            
-            
+            print("Received command from \(peerID.displayName): \(command)")
         } catch {
-            print("Failed to decode JSON: \(error)")
+            print("Failed to decode NetworkCommand from \(peerID.displayName): \(error)")
         }
+        
+
     }
     
     //idk what these are for

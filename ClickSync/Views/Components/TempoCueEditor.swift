@@ -1,5 +1,7 @@
 import SwiftUI
 
+
+/// Editor for a tempo cue. UI-only, edits local draft state then returns updates state through"Save"
 struct TempoCueEditor: View {
 
     @Binding var editingCue: TempoCue?
@@ -19,8 +21,13 @@ struct TempoCueEditor: View {
             ZStack {
                 Color.black.opacity(0.4)
                     .ignoresSafeArea()
-                    .onTapGesture { focusedField = nil
-                        dismiss() }
+                    .onTapGesture {
+                        if focusedField != nil {
+                            focusedField = nil
+                        } else {
+                            dismiss()
+                        }
+                    }
                 
                 
                 VStack(spacing: 16) {

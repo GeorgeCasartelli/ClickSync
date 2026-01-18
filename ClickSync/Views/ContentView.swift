@@ -6,12 +6,6 @@
 //
 
 import SwiftUI
-import AudioKit
-import SoundpipeAudioKit
-import Foundation
-import AVFoundation
-
-
 
 struct ContentView: View {
     
@@ -19,7 +13,7 @@ struct ContentView: View {
     private var isPhone:Bool {hSize == .compact}
     
     @StateObject private var multipeerManager: MultipeerManager
-    @StateObject private var metroVM: MetronomeView.ViewModel
+    @StateObject private var metroVM: MetronomeViewModel
     @StateObject private var networkVM: NetworkViewModel
     
     @State private var showSettingsView = false
@@ -29,7 +23,7 @@ struct ContentView: View {
     init() {
         let mpManager = MultipeerManager()
         _multipeerManager = StateObject(wrappedValue: mpManager)
-        _metroVM = StateObject(wrappedValue: MetronomeView.ViewModel())
+        _metroVM = StateObject(wrappedValue: MetronomeViewModel())
         _networkVM = StateObject(wrappedValue: NetworkViewModel(manager: mpManager))
     }
     
@@ -42,19 +36,11 @@ struct ContentView: View {
             GeometryReader { geo in
                 VStack(spacing: 0) {
                     
-                    AppNavBar(showNetworkView: $showSettingsView
-                    )
-                    .environmentObject(multipeerManager)
-                    .frame(height: isPhone ? 40 : 60)
-                    //                            .padding(.top, geo.safeAreaInsets.top)
-                    //                        //                    UnixTimeView()
-                    //                            .foregroundStyle(.white)
-                    
+                    AppNavBar(showSettingsView: $showSettingsView)
+                        .frame(height: isPhone ? 40 : 60)
                     
                     ZStack {
                         MetronomeView(showCueButtons: $showCueButtons)
-                            .environmentObject(multipeerManager)
-                            .environmentObject(metroVM)
                             .frame(maxWidth: .infinity)
                         
                         if showSettingsView {
@@ -66,9 +52,6 @@ struct ContentView: View {
                                 }
                             
                             SettingsView(showSoundPickerView: $showSoundPickerView, showCueButtons: $showCueButtons, disableShowCueButtons: multipeerManager.role == .client)
-                                .environmentObject(networkVM)
-                                .environmentObject(metroVM)
-                                .environmentObject(multipeerManager)
                                 .frame(width: 350, height: 400)
                                 .background(.ultraThinMaterial)
                                 .cornerRadius(20)
@@ -101,14 +84,14 @@ struct ContentView: View {
                     
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(red: 0.06, green: 0.06, blue: 0.06).ignoresSafeArea())                }
-            
-            
-            
-            
+                .background(Color(red: 0.06, green: 0.06, blue: 0.06).ignoresSafeArea())
+            }
         }
+        .environmentObject(multipeerManager)
+        .environmentObject(metroVM)
+        .environmentObject(networkVM)
         .onAppear {
-            metroVM.bind(multipeer: multipeerManager)
+            metroVM.attach(multipeer: multipeerManager)
         }
     }
 }

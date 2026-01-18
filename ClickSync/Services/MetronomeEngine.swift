@@ -5,6 +5,13 @@
 //  Created by George Casartelli on 04/12/2025.
 //
 
+//MARK: METRONOME ENGINE
+///MetronomeEnging is a service tht encapsulaates AudioKit + deterministic tick scheduling
+///ViewModels control/interract with engine through small API (tempo, transport, accents etc) and UI updates delivered thru callbacks
+///
+/// Instead of using AppleSequencer we use hostTime scheduling.
+/// Thiis makes tighter synchro between multiple devices
+
 import AudioKit
 import AVFoundation
 import Foundation
@@ -19,11 +26,6 @@ class MetronomeEngine {
     private var loMixer: Mixer!
     private var mainMixer: Mixer!
     
-    let sequencer = AppleSequencer()
-    
-    private var hiTrack: MusicTrackManager!
-    private var loTrack: MusicTrackManager!
-    
     private(set) var hiVolume: Float = 1.0
     private(set) var loVolume: Float = 1.0
     
@@ -37,13 +39,6 @@ class MetronomeEngine {
     private(set) var soundPairs: [String: (hi: String, lo: String)] = [:]
     private(set) var accentedBeats: Set<Int> = [0]
     private(set) var currentBeat: Int = 0
-    private(set) var loopLengthBeats: Double = 4.0
-    
-    @Published private(set) var currentPositionInBeats: Double = 0
-    
-    private var sequencerStartTime: Double = 0
-    
-    private var displayLink: CADisplayLink?
     
     var onBeatChange: ((Int) -> Void)?
     
@@ -74,9 +69,7 @@ class MetronomeEngine {
         mainMixer = Mixer([hiMixer, loMixer])
         engine.output = mainMixer
         mainMixer.volume = 10.0
-        
-        initialiseSequencer()
-        sequencer.rewind()
+
 //        sequencer.play() // run sequencer continuously
         // Connect sequencer to sampler
         
@@ -127,56 +120,23 @@ class MetronomeEngine {
         mainMixer.volume = muted ? 0.0 : 10.0
     }
     
-    
-    func preroll() {
-        do { try sequencer.preroll() } catch { print("Preroll err: \(error)") }
-    }
-    
-    private func initialiseSequencer() {
-        
-        hiTrack = sequencer.newTrack()
-        hiTrack?.setMIDIOutput(hiSampler.midiIn)
-        hiTrack?.add(noteNumber: 60, velocity: 127, position: Duration(beats:0), duration: Duration(beats:1))
-
-        loTrack = sequencer.newTrack()
-        loTrack?.setMIDIOutput(loSampler.midiIn)
-        
-        for beat in 1...3 {
-            loTrack?.add(noteNumber: 60, velocity: 127, position: Duration(beats:Double(beat)), duration: Duration(beats:1))
-        }
-        
-        
-        sequencer.setTempo(120)
-        sequencer.enableLooping() // Allow short sequence to loop
-    }
-    
-    
-    
+   
     func setSequence(restart: Bool = false, top: Int) {
 
-//        accentedBeats = accentedBeats.filter { $0 < top }
+        accentedBeats = accentedBeats.filter { $0 < top }
         
         if accentedBeats.isEmpty {
             accentedBeats.insert(0)
         }
-        
-        hiTrack.clear()
-        loTrack.clear()
-        
-        sequencer.setLoopInfo(Duration(beats: Double(top)), loopCount: 0)
-
-        for beat in 0..<top {
-            if accentedBeats.contains(beat) {
-                hiTrack?.add(noteNumber: 60, velocity: 127, position: Duration(beats: Double(beat)), duration: Duration(beats: 1))
-            } else {
-                loTrack?.add(noteNumber: 60, velocity: 127, position: Duration(beats: Double(beat)), duration: Duration(beats: 1))
-            }
-        }
-        if restart {
-            sequencer.rewind()
-        }
 
         timeSigTop = top
+        
+        if isTransportRunning {
+            
+            if restart, let newHost = currentHostTime() {
+                playTransport(atHostTime: newHost)
+            }
+        }
     }
 
     
@@ -205,18 +165,14 @@ class MetronomeEngine {
             // split name into parts
             var parts = baseName.split(separator: "_")
             
-            
             // get hi/lo identifier
             let lastPart = parts.last
             let type = lastPart
-            
-            
             // get key
             parts.removeLast()
             // create key without hi/lo identifier
             let key = parts.joined(separator: "_")
 
-            
             // if results[key] doesn't exist, create new entry
             var entry = results[key] ?? (hi: "", lo: "")
             if type == "hi" {
@@ -228,21 +184,24 @@ class MetronomeEngine {
             results[key] = entry
             
         }
+        
+        for (key, entry) in results {
+            var e = entry
+            if e.hi.isEmpty { e.hi = e.lo }
+            if e.lo.isEmpty { e.lo = e.hi }
+            results[key] = e
+        }
             
         return results
     }
     
     func prepareTransport() {
-        if !sequencer.isPlaying {
-            do { try sequencer.preroll() } catch { print("preroll err: \(error)")}
-        }
+        // deprecated
     }
     
     func startTransportFromtZero() {
-        sequencer.stop()
-        sequencer.rewind()
-        do { try sequencer.preroll() } catch {}
-        sequencer.play()
+        guard let nowHost = currentHostTime() else { return }
+        playTransport(atHostTime: nowHost)
     }
     
     //MARK: Sequencer Scheduling
@@ -274,7 +233,6 @@ class MetronomeEngine {
         tickTimer?.cancel()
         tickTimer = nil
         
-        
         currentBeat = 0
         beatIndex = 0
         
@@ -283,7 +241,6 @@ class MetronomeEngine {
         }
     }
     
-    //MARK: AI CODE HERE TO
     private func startTickScheduler() {
         let timer = DispatchSource.makeTimerSource(queue:  DispatchQueue.global(qos: .userInteractive))
         timer.schedule(deadline: .now(), repeating: tickInterval)
@@ -346,13 +303,16 @@ class MetronomeEngine {
 
     private func waitUntilHostTime(_ target: UInt64, runID: UUID) {
         // steadier solution for sequencing than appleSequencer
+        // Busy-wait with short sleep for procise host times
+        // trades a  bit of cpu  for more coonstant beat alignment
+
         while true {
             // check if cancelled
             if !isTransportRunning || transportRunID != runID { return }
             
             guard let now = currentHostTime() else { return }
             if now >= target { return }
-            // sleep ~0.2ms to avoid pegging CPU
+            // sleep 0.2ms ish to avoid pegging CPU     
             usleep(200)
         }
     }
@@ -364,24 +324,12 @@ class MetronomeEngine {
         return nowHost &+ secondsToHostTime(delta)
     }
 
-    //MARK: HERE
-    
-    var currentSequencerPosition: Double {
-        sequencer.currentPosition.beats.truncatingRemainder(dividingBy: loopLengthBeats)
-    }
-
-
     func audioHostTime() -> UInt64? {
         engine.avEngine.outputNode.lastRenderTime?.hostTime
     }
     
     
-//    func togglePlay() {
-//        sequencer.isPlaying ? stopTransport() : playTransport()
-//    }
-    
     func setTempo(_ bpm: Double) {
-//        sequencer.setTempo(bpm)
         print("Setting tempo to \(bpm)")
         tempo = bpm
         updateTickPeriod()

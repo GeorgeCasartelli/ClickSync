@@ -7,13 +7,6 @@
 
 import SwiftUI
 
-struct TimeSigButton: Identifiable {
-    let id = UUID()
-    let label: Double
-    var action: (() -> Void)? = nil
-    
-}
-
 struct TimeSignatureOptions: View {
     let options: [Int]
     let current: Int
@@ -24,23 +17,21 @@ struct TimeSignatureOptions: View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack {
                 ForEach (options, id: \.self) { value in
-                    Button {
-                         onSelect(value)
-                    } label: {
+                    Button { onSelect(value) } label: {
                         Text("\(value)")
                             .secondaryStyle()
-                            
                             .foregroundStyle(value == current ? .orange : .white.opacity(0.6))
                     }
                     
                 }
             }
-        }.frame(height: 100)
-        
         }
+        .frame(height: 100)
+    }
 }
 
-
+/// UI component for time sig selection with dropdown style components
+///  UI needs to be made much simpler (remove geometryReader) but no time left
 struct TimeSignaturePanel: View {
     @Binding var top: Double
     @Binding var bottom: Double

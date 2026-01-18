@@ -7,6 +7,10 @@
 
 import SwiftUI
 
+
+/// Settings only modal with tabbed sections for network/audio/info
+///
+/// UI only
 struct SettingsView: View {
     
     
@@ -17,12 +21,11 @@ struct SettingsView: View {
 
     
     @EnvironmentObject private var networkVM: NetworkViewModel
-    @EnvironmentObject private var metro: MetronomeView.ViewModel
-    @EnvironmentObject private var multipeerManager: MultipeerManager
+    @EnvironmentObject private var metro: MetronomeViewModel
     @State private var selectedTab: SettingsTab = .network
     @State private var previousTab: SettingsTab = .network
     
-    
+    // MARK:  - TABS
     enum SettingsTab: Int, CaseIterable, Identifiable {
         case network = 0
         case audio = 1
@@ -48,13 +51,14 @@ struct SettingsView: View {
                     removal: .move(edge: transitionEdge  == .trailing ? .leading : .trailing))
     }
     
+    // MARK: - VIEW
     var body: some View {
         ZStack {
             Color(.black).opacity(0.4)
             VStack(spacing: 20) {
                 
                 HStack(spacing: 8) {
-                    
+                    //settings tabs
                     ForEach(SettingsView.SettingsTab.allCases) { tab in
                         Button(action: {
                             
@@ -78,8 +82,8 @@ struct SettingsView: View {
                 }
                 .padding()
                 
-//                Divider()
                 ZStack{
+                    // display relevant info for each tab
                     switch selectedTab {
                     case .network:
                         NetworkView()
@@ -172,15 +176,52 @@ struct SettingsView: View {
                     case .info:
                         ZStack {
                             Color(.orange).opacity(0.3)
-                            
-                            VStack {
-                                Text("This is a metronome app! Use it like a metronome!").generalTextStyle()
+
+                            ScrollView(.vertical, showsIndicators: true) {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    Text("ClickSync")
+                                        .mainStyle()
+
+                                    Text("A networked metronome for rehearsals and live use. One device can act as the Master and keep other devices locked in time.")
+                                        .generalTextStyle()
+                                        .foregroundColor(.white.opacity(0.9))
+
+                                    Text("Quick guide")
+                                        .generalTextStyle()
+                                        .foregroundColor(.white)
+
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("• Network: Open the Network tab and choose a role.")
+                                            .generalTextStyle()
+                                        Text("• Master Device: Starts/stops playback and broadcasts tempo changes.")
+                                            .generalTextStyle()
+                                        Text("• Client Device: Receives commands and follows the Master automatically.")
+                                            .generalTextStyle()
+                                        Text("• Tempo Cues: Tap a cue to queue a BPM change at the next bar boundary.")
+                                            .generalTextStyle()
+                                        Text("• Accents: Tap beats in the accent row to toggle accented clicks.")
+                                            .generalTextStyle()
+                                        Text("• Audio: Adjust HI/LO volumes and choose click sounds in the Audio tab.")
+                                            .generalTextStyle()
+                                    }
+                                    .foregroundColor(.white.opacity(0.9))
+
+                                    Divider().opacity(0.25)
+
+                                    Text("Tip: For best sync, connect devices before starting playback and keep one Master.")
+                                        .generalTextStyle()
+                                        .foregroundColor(.white.opacity(0.8))
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
-                        .frame(maxWidth:        .infinity,maxHeight: .infinity)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .cornerRadius(20)
                         .padding()
                         .transition(.opacity)
+
+
                     }
                 }
                     
@@ -190,6 +231,7 @@ struct SettingsView: View {
                 .padding()
                 
         }
+        // MARK: - State constraints
         .onChange(of: disableShowCueButtons) { disabled in
             if disabled {
                 withAnimation { showCueButtons = false }
