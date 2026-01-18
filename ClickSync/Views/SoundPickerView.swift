@@ -6,6 +6,8 @@
 //
 import SwiftUI
 
+// ALL SOUNDS IN THIS SOUND PICKER VIEW GAINED FROM https://www.reddit.com/r/audioengineering/comments/kg8gth/free_click_track_sound_archive/
+
 struct SoundPickerView: View {
     let availableSounds: [String]
     let selectedSound: String
