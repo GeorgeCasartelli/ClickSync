@@ -12,9 +12,9 @@ struct SoundPickerView: View {
     let onSelectSound: (String) -> Void
 
     var body: some View {
+        
         ZStack {
-            // Background: matte metal
-            Color(.red).opacity(0.4)
+            Color(.black).opacity(0.4)
 
             VStack(spacing: 20) {
                 Text("Sound Selector")
@@ -23,7 +23,7 @@ struct SoundPickerView: View {
                     .foregroundColor(.orange)
                     .shadow(color: .orange.opacity(0.5), radius: 8)
 
-                // Card container
+                // card container
                 ScrollView {
                     VStack(spacing: 0) {
                         ForEach(availableSounds, id: \.self) { sound in

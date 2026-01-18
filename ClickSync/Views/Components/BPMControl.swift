@@ -7,6 +7,9 @@
 
 import SwiftUI
 
+
+/// BPM input control support typing and drag gestures (with clamping and haptic feedback)
+///
 struct BPMControl: View {
     
     @Binding var bpm: Double
@@ -82,25 +85,29 @@ struct BPMControl: View {
 
                 .gesture(
                     
+                    // if not disabled
                     disabled ? nil : DragGesture()
                         .onChanged { value in
-                            if !isDragging {
+                            if !isDragging { // set booleans and perform start logic
                                 onDragStart?()
                                 isDragging = true
                             }
-                            
+                            // allow for x/y dragging
                             let deltaH = value.translation.width * dragSensitivity
                             let deltaV = -value.translation.height * dragSensitivity
                             var newBPM = dragStartValue + deltaH + deltaV
                             newBPM = min(max(newBPM, minBPM), maxBPM)
                             
+                            // set dragDir for colours
                             if newBPM > dragStartValue {
                                 dragDir = .up
                             } else {
                                 dragDir = .down
                             }
+                            
                             bpm = round(newBPM)
-                            print("\(bpm)")
+                            
+                            // haptics for mobile
                             if Int(bpm) % 10 == 0 {
                                 if Int(bpm) != lastHaptic {
                                     hapticGenerator.impactOccurred()
@@ -113,6 +120,7 @@ struct BPMControl: View {
                             }
                         }
                         .onEnded { _ in
+                            // trigger booleans and logic for other functions
                             dragStartValue = bpm
                             isDragging = false
                             dragDir = .none

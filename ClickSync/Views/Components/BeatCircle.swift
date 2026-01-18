@@ -4,6 +4,8 @@
 //
 //  Created by George Casartelli on 18/12/2025.
 //
+
+/// Visual beat indicator used in the accent picker. Pulses purple when beat is current
 import SwiftUI
 
 struct BeatCircle: View {
@@ -43,7 +45,6 @@ struct BeatCircle: View {
                         radius: isAccented ? 6 : 0)
         
             .onChange(of: isCurrent) { newValue in
-//                guard newValue else { return }
                 if newValue {
                     
                     // snap in

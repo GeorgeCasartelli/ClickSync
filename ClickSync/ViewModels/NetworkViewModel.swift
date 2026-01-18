@@ -1,5 +1,5 @@
 //
-//  Untitled.swift
+//  NetworkViewModel.swift
 //  ClickSync
 //
 //  Created by George Casartelli on 05/01/2026.
@@ -20,6 +20,7 @@ class NetworkViewModel: ObservableObject {
         self.manager = manager
         
         manager.$connectedPeers
+            .receive(on: DispatchQueue.main)
             .assign(to: \.peers, on: self)
             .store(in: &cancellables)
         
@@ -32,7 +33,5 @@ class NetworkViewModel: ObservableObject {
     func startAsMaster() {manager.startAsMaster()}
     func startAsClient() {manager.startAsClient()}
     func disconnect() {manager.stop()}
-    func sendStartCommand() {manager.sendCommand(["action": "start", "sender": "\(role)"])}
-    func sendStopCommand() {manager.sendCommand(["action": "stop", "sender": "\(role)"])}
     
 }

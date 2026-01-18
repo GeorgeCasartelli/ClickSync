@@ -31,7 +31,7 @@ struct AccentPickerView: View {
     }
     
     var body: some View {
-        let circleSize: CGFloat = beatCount <= 8 ? (isPhone ? 18 : 24) : (beatCount <= 10 ? (isPhone ? 16 : 24) : (isPhone ? 14 : 24))
+        let circleSize: CGFloat = beatCount <= 8 ? (isPhone ? 22 : 24) : (beatCount <= 10 ? (isPhone ? 20 : 24) : (isPhone ? 17 : 24))
         let spacing: CGFloat = beatCount <= 4 ? 16 : (beatCount <= 8 ? 12 : 8)
         
     
@@ -45,10 +45,7 @@ struct AccentPickerView: View {
                     onTap: { onTapBeat(beat) }
                 )
 
-                    .onTapGesture {
-                        onTapBeat(beat)
-                    }
-                    .padding(.trailing, ((beat + 1) % 4 == 0 && beat != beatCount - 1) ? 4 : 4)
+//                    .padding(.trailing, 4)
                 if let interval = dividerInterval, (beat + 1) % interval == 0 && beat != beatCount - 1 {
                     Rectangle()
                         .fill(Color.orange.opacity(0.3))
@@ -62,21 +59,22 @@ struct AccentPickerView: View {
         .frame(height:50)
         
         
-        withAnimation(.easeInOut(duration: 0.5)) {
-            Group {
-                if isPhone && beatCount >= 13 {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        row
-                    }.background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(.teal.opacity(0.2))
-                    )
-                } else {
+       
+        Group {
+            if isPhone && beatCount >= 13 {
+                ScrollView(.horizontal, showsIndicators: false) {
                     row
-                        .frame(maxWidth: .infinity)
-                }
+                }.background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(.teal.opacity(0.2))
+                )
+            } else {
+                row
+                    .frame(maxWidth: .infinity)
             }
         }
+        .animation(.easeInOut(duration: 0.5), value: beatCount)
+        
         
         
 

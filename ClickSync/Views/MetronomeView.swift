@@ -12,7 +12,7 @@ struct MetronomeView: View {
     @Environment(\.horizontalSizeClass) private var hSize
     private var isPhone:Bool {hSize == .compact}
     
-    @EnvironmentObject var metroVM: ViewModel
+    @EnvironmentObject var metroVM: MetronomeViewModel
     @EnvironmentObject private var multipeerManager:  MultipeerManager
 
     @FocusState private var bpmFocused: Bool
@@ -23,7 +23,7 @@ struct MetronomeView: View {
     @Binding var showCueButtons: Bool
     
     @State private var editingCue: TempoCue? = nil
-    
+
     let bottomValues = [1.0, 2.0, 4.0, 8.0]
     
     
@@ -32,10 +32,7 @@ struct MetronomeView: View {
         ZStack {
 //            Color(red: 0.06, green: 0.06, blue: 0.06)
 //                .ignoresSafeArea()
-            
-            
-            
-            
+
             VStack(spacing: 20) {
                 
                 Spacer()
@@ -49,26 +46,11 @@ struct MetronomeView: View {
                     },
                     onDragEnd: { finalBPM in
                         isEditingBpm = false
-                        metroVM.requestTempoChange(finalBPM, mode: .immediate)
-                        guard multipeerManager.role == .master else { return }
-                        guard !multipeerManager.connectedPeers.isEmpty else { return }
-                        multipeerManager.sendCommand([
-                            "action":"setBPM",
-                            "sender":"master",
-                            "bpm":finalBPM
-                            
-                        ])
+                        metroVM.setBpmFromUI(finalBPM)
                     },
                     
                     onCommit: { committedBpm in
-                        metroVM.requestTempoChange(committedBpm, mode: .immediate)
-                        guard multipeerManager.role == .master else { return }
-                        guard !multipeerManager.connectedPeers.isEmpty else { return }
-                        multipeerManager.sendCommand([
-                            "action": "setBPM",
-                            "sender": "master",
-                            "bpm": committedBpm
-                        ])
+                        metroVM.setBpmFromUI(committedBpm)
                     }
                 )
                 .padding()
@@ -80,13 +62,9 @@ struct MetronomeView: View {
                 if !isPhone { Spacer() }
                 
                 ZStack{
-//                    Circle()
-//                        .fill(Color.orange.opacity(0.3))
-//                        .frame(width: metroVM.isPlaying ? 100 : 80,
-//                               height: metroVM.isPlaying ? 100 : 80)
-//                        .animation(.easeOut(duration: 0.6).repeatForever(autoreverses: true), value: metroVM.isPlaying)
+
                     Button {
-                        metroVM.togglePlay(multipeer: multipeerManager)
+                        metroVM.togglePlayFromUI()
                     } label: {
                         
                         Text(metroVM.playIcon)
@@ -104,15 +82,6 @@ struct MetronomeView: View {
                 }
                 
                 Spacer()
-                
-                //                    VStack(spacing: 6) {
-                //                        if let queued = metroVM.pendingBpm {
-                //                            Text("Queued -> \(Int(queued))")
-                //                                .font(.caption)
-                //                                .foregroundStyle(.orange.opacity(0.8))
-                //                        }
-                
-                
                 
                 VStack(spacing: 12) {
                     TimeSignaturePanel(top: $metroVM.timeSigTop, bottom: $metroVM.timeSigBtm)
@@ -167,7 +136,7 @@ struct MetronomeView: View {
                                 .frame(width: 100)
                                 .contentShape(RoundedRectangle(cornerRadius: 10))
                                 .onTapGesture {
-                                    metroVM.triggerTempoCue(cue, multipeer: multipeerManager)
+                                    metroVM.triggerTempoCueFromUI(cue)
                                 }
                                 .onLongPressGesture(minimumDuration: 0.35, maximumDistance: 30) {
                                     print("LONG PRESS \(cue.label)")
@@ -225,9 +194,7 @@ struct MetronomeView: View {
                         }
                 }
             }
-            
-            
-            
+         
             if editingCue != nil  {
                 TempoCueEditor(editingCue: $editingCue) { updated in
                     metroVM.updateCue(updated)
@@ -242,29 +209,14 @@ struct MetronomeView: View {
         .padding()
         .animation(.easeInOut(duration: 0.18), value: editingCue != nil)
         .ignoresSafeArea(.keyboard, edges: .bottom)
-     
+        
         .onAppear {
             bpmDraft = metroVM.bpm
         }
         
-            .onChange(of: metroVM.bpm) { newRealBPM in
-                guard !isEditingBpm else { return }
-                bpmDraft = newRealBPM
-            }
-        
-            .onReceive(multipeerManager.$lastCommand) { cmd in
-                guard multipeerManager.role == .client else { return }
-                guard let cmd else { return }
-                guard let action = cmd["action"] as? String, action == "setBPM" else { return }
-                
-                let bpmValue: Double?
-                if let bpm = cmd["bpm"] as? Double { bpmValue = bpm }
-                else if let n = cmd["bpm"] as? NSNumber { bpmValue = n.doubleValue}
-                else { bpmValue = nil }
-                
-                guard let receivedBpm = bpmValue else { return }
-                
-                metroVM.requestTempoChange(receivedBpm)
-            }
+        .onChange(of: metroVM.bpm) { newRealBPM in
+            guard !isEditingBpm else { return }
+            bpmDraft = newRealBPM
+        }
     }
 }
