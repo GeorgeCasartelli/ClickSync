@@ -26,11 +26,6 @@ class MetronomeEngine {
     private var loMixer: Mixer!
     private var mainMixer: Mixer!
     
-    let sequencer = AppleSequencer()
-    
-    private var hiTrack: MusicTrackManager!
-    private var loTrack: MusicTrackManager!
-    
     private(set) var hiVolume: Float = 1.0
     private(set) var loVolume: Float = 1.0
     
@@ -44,7 +39,6 @@ class MetronomeEngine {
     private(set) var soundPairs: [String: (hi: String, lo: String)] = [:]
     private(set) var accentedBeats: Set<Int> = [0]
     private(set) var currentBeat: Int = 0
-    
     
     var onBeatChange: ((Int) -> Void)?
     
@@ -75,9 +69,7 @@ class MetronomeEngine {
         mainMixer = Mixer([hiMixer, loMixer])
         engine.output = mainMixer
         mainMixer.volume = 10.0
-        
-        initialiseSequencer()
-        sequencer.rewind()
+
 //        sequencer.play() // run sequencer continuously
         // Connect sequencer to sampler
         
@@ -128,51 +120,23 @@ class MetronomeEngine {
         mainMixer.volume = muted ? 0.0 : 10.0
     }
     
-    private func initialiseSequencer() {
-        
-        hiTrack = sequencer.newTrack()
-        hiTrack?.setMIDIOutput(hiSampler.midiIn)
-        hiTrack?.add(noteNumber: 60, velocity: 127, position: Duration(beats:0), duration: Duration(beats:1))
-
-        loTrack = sequencer.newTrack()
-        loTrack?.setMIDIOutput(loSampler.midiIn)
-        
-        for beat in 1...3 {
-            loTrack?.add(noteNumber: 60, velocity: 127, position: Duration(beats:Double(beat)), duration: Duration(beats:1))
-        }
-        
-        
-        sequencer.setTempo(120)
-        sequencer.enableLooping() // Allow short sequence to loop
-    }
-    
-    
-    
+   
     func setSequence(restart: Bool = false, top: Int) {
 
-//        accentedBeats = accentedBeats.filter { $0 < top }
+        accentedBeats = accentedBeats.filter { $0 < top }
         
         if accentedBeats.isEmpty {
             accentedBeats.insert(0)
         }
-        
-        hiTrack.clear()
-        loTrack.clear()
-        
-        sequencer.setLoopInfo(Duration(beats: Double(top)), loopCount: 0)
-
-        for beat in 0..<top {
-            if accentedBeats.contains(beat) {
-                hiTrack?.add(noteNumber: 60, velocity: 127, position: Duration(beats: Double(beat)), duration: Duration(beats: 1))
-            } else {
-                loTrack?.add(noteNumber: 60, velocity: 127, position: Duration(beats: Double(beat)), duration: Duration(beats: 1))
-            }
-        }
-        if restart {
-            sequencer.rewind()
-        }
 
         timeSigTop = top
+        
+        if isTransportRunning {
+            
+            if restart, let newHost = currentHostTime() {
+                playTransport(atHostTime: newHost)
+            }
+        }
     }
 
     
@@ -232,13 +196,10 @@ class MetronomeEngine {
     }
     
     func prepareTransport() {
-        if !sequencer.isPlaying {
-            do { try sequencer.preroll() } catch { print("preroll err: \(error)")}
-        }
+        // deprecated
     }
     
     func startTransportFromtZero() {
-
         guard let nowHost = currentHostTime() else { return }
         playTransport(atHostTime: nowHost)
     }
@@ -271,8 +232,6 @@ class MetronomeEngine {
         
         tickTimer?.cancel()
         tickTimer = nil
-        
-
         
         currentBeat = 0
         beatIndex = 0
