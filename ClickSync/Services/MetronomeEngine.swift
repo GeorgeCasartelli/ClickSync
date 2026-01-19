@@ -69,9 +69,6 @@ class MetronomeEngine {
         mainMixer = Mixer([hiMixer, loMixer])
         engine.output = mainMixer
         mainMixer.volume = 10.0
-
-//        sequencer.play() // run sequencer continuously
-        // Connect sequencer to sampler
         
         configureAudioSession()
         
@@ -117,10 +114,10 @@ class MetronomeEngine {
     
     
     func setMuted(_ muted: Bool) {
-        mainMixer.volume = muted ? 0.0 : 10.0
+        mainMixer.volume = muted ? 0.0 : 8.0
     }
     
-   
+   // update sequence (accent change or timesig change)
     func setSequence(restart: Bool = false, top: Int) {
 
         accentedBeats = accentedBeats.filter { $0 < top }
@@ -139,7 +136,8 @@ class MetronomeEngine {
         }
     }
 
-    
+    // load/build different sounds.
+    // all sounds found on reddit from u/errorjones https://www.reddit.com/r/audioengineering/comments/kg8gth/free_click_track_sound_archive/
     func loadSoundPairs(named name: String) {
         print("Sounds to be loaded are: \(name)")
         guard let pair = soundPairs[name] else {return}
@@ -184,7 +182,8 @@ class MetronomeEngine {
             results[key] = entry
             
         }
-        
+
+        // if "lo" with no "hi", mirror across
         for (key, entry) in results {
             var e = entry
             if e.hi.isEmpty { e.hi = e.lo }
@@ -208,10 +207,10 @@ class MetronomeEngine {
     func playTransport(atHostTime hostTime: UInt64) {
         stopTransport()
         
-        transportRunID = UUID() // create new UUID for runtime
+        transportRunID = UUID() // create new UUID for runtime validation
         isTransportRunning = true
         
-        updateTickPeriod()
+        updateTickPeriod() 
         startHostTime = hostTime
         nextTickHostTime = hostTime
         beatIndex = 0
@@ -220,7 +219,7 @@ class MetronomeEngine {
         DispatchQueue.main.async { [weak self] in
             self?.onBeatChange?(0)
         }
-        
+        // start the playback
         startTickScheduler()
     }
     
@@ -240,11 +239,14 @@ class MetronomeEngine {
             self?.onBeatChange?(0)
         }
     }
-    
+
+    // maintenance timer to trigger scheduleTicksLookahead a bunch of times per sencond
     private func startTickScheduler() {
+        // dispatch source time on high prio q
         let timer = DispatchSource.makeTimerSource(queue:  DispatchQueue.global(qos: .userInteractive))
         timer.schedule(deadline: .now(), repeating: tickInterval)
-        
+
+        // fire every 20ms
         timer.setEventHandler { [weak self] in
             guard let self else {return}
             self.scheduleTicksLookahead()
@@ -253,14 +255,16 @@ class MetronomeEngine {
         tickTimer = timer
         timer.resume()
     }
-    
+
+    // schedule beats within a short lookahead window to reduce jitter
     private func scheduleTicksLookahead() {
+        // read current monotonic audio host time
         guard let nowHost = currentHostTime() else { return }
-
+        // find end of lookahead window in hosttime units
         let lookaheadHost = nowHost &+ secondsToHostTime(tickLookahead)
-
+        // schedule beats until lookahead full
         while nextTickHostTime <= lookaheadHost {
-            // check accents and call hi/lo
+            // check accents and call hi/lo (determine beat index(
             let beat = beatIndex % timeSigTop
             let isAccented = accentedBeats.contains(beat)
 
@@ -279,6 +283,8 @@ class MetronomeEngine {
         }
     }
 
+    // schedules sampler tick to play at specific host time
+    // transportRunID used to cancle pending ticks if metro gets paused
     private func scheduleSamplerTick(accented: Bool, hostTime: UInt64) {
         let runID = transportRunID
         
@@ -349,14 +355,15 @@ class MetronomeEngine {
     
     func tap() -> Double? {
         let now = CACurrentMediaTime()
-        
+        // add newest tap too array
         tapTimestamps.append(now)
         
-        
+        // calculate interval between now and last tap
         if tapTimestamps.count > 1 {
             let prevTap = tapTimestamps[tapTimestamps.count - 2]
             let recentInterval = now - prevTap
-            
+
+            // ensure all recent taps are within a fair amount of time
             if recentInterval < 2.0 {
                 
                 tapIntervals.append(recentInterval)
