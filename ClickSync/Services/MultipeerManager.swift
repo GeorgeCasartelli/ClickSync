@@ -40,7 +40,7 @@ class MultipeerManager: NSObject, ObservableObject {
     private var advertiser: MCNearbyServiceAdvertiser!
     private var browser: MCNearbyServiceBrowser!
     // should be renamed to "click-sync"
-    private let serviceType = "word-share"
+    private let serviceType = "clicksync"
     
     override init() {
         // device name as displayname (functionality for custom names soon)
