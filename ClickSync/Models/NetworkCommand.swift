@@ -7,6 +7,7 @@
 
 import Foundation
 
+// structs and enums for creating network cmds. in future, more actions can be added to allow for more network control.
 enum NetworkAction: String, Codable {
     case start
     case stop
