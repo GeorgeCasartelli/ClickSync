@@ -2,13 +2,13 @@
 
 ClickSync is an app built in SwiftUI designed to help musicians in small venues or with low budgets have the chance to play together with a syncronised click track.
 
-This project makes use of AudioKit and MultipeerConnectivity
+This project makes use of AudioKit and MultipeerConnectivity, with a custom sequencer which relies on hostTime for sample accurate playback.
 
-Currently still a work in progress, but thought I'd now track milestones!
+Below is a screenshot of the application on a standard iPhone:
 
+<img width="325" height="687" alt="image" src="https://github.com/user-attachments/assets/ec5a9f9b-987b-45e5-b481-8028742bbf2b" />
 
-<img width="406" height="739" alt="image" src="https://github.com/user-attachments/assets/d4d76c19-e816-4731-bdfc-d78f38f00ebc" />
-
+Network settings can be accessed from the settings tab and the network button at the top left. The rest is as you see it!
 
 #### MILESTONES
 
@@ -27,6 +27,8 @@ Managed to sync up the metronomes! AppleSequencer from audiokit had differing st
 ###### 14/01/2026
 Networked BPM control added, with new "Tempo Queue" options, which allows users to queue a tempo change at the end of a bar, with 4 customisable buttons available for users to be able to put the bpm that they want. This then allows for synchronised tempo changes for devices across the network! 
 
+###### 16/02/2026
+Grade came back at 82% for this module! Very very happy with the outcome!
 
 #### Cloning issues
 
